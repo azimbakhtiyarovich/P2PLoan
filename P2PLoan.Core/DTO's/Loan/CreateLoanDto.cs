@@ -4,9 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace P2PLoan.Core.DTO_s.Loan
+namespace P2PLoan.Core.DTO_s.Loan;
+public class CreateLoanDto
 {
-    internal class CreateLoanDto
-    {
-    }
+    public decimal Amount { get; set; }
+    public double InterestRate { get; set; }
+    public int DurationMonths { get; set; }
 }
+
