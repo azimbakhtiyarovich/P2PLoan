@@ -7,7 +7,8 @@ using System.Threading.Tasks;
 namespace P2PLoan.Core.DTO_s.Auth;
 public class RegisterDto 
 {
+    public string Name { get; set; }
     public string Email { get; set; }
     public string PhoneNumber { get; set; }
-    public string PasswordHash { get; set; }
+    public string Password { get; set; }
 }
