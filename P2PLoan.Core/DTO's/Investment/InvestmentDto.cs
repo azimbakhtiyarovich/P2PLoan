@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace P2PLoan.Core.DTO_s.Investment;
+namespace P2PLoan.Core.DTO.Investment;
 public class InvestmentDto
 {
     public Guid Id { get; set; }

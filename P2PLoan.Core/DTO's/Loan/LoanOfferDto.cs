@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace P2PLoan.Core.DTO_s.Loan;
+namespace P2PLoan.Core.DTO.Loan;
 public class LoanOfferDto
 {
     public Guid Id { get; set; }

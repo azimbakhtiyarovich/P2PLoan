@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace P2PLoan.Core.DTO_s.Profile;
+namespace P2PLoan.Core.DTO.Profile;
 public class UserProfileDto 
 { 
     public Guid UserId { get; set; } 
