@@ -11,8 +11,6 @@ public class BorrowerProfile
 {
     [Key] public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }
-
-    // Sensitive: encrypt at application/db level
     [MaxLength(50)] public string? PassportNumber { get; set; }
     public DateTime? PassportIssuedDate { get; set; }
     public DateTime? BirthDate { get; set; }

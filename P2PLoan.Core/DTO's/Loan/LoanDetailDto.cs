@@ -1,12 +1,6 @@
-﻿using P2PLoan.Core.DTO_s.Payment;
-using P2PLoan.Core.Enum_s;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using P2PLoan.Core.DTO.Payment;
 
-namespace P2PLoan.Core.DTO_s.Loan;
+namespace P2PLoan.Core.DTO.Loan;
 public class LoanDetailDto:LoanSummaryDto
 {
     public string? Description { get; set; }

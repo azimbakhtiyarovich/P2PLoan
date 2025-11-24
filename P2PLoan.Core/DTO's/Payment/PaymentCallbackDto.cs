@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace P2PLoan.Core.DTO_s.Payment;
+namespace P2PLoan.Core.DTO.Payment;
 public class PaymentCallbackDto
 {
     public string Provider { get; set; } = null!;
