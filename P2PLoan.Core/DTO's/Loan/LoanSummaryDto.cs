@@ -5,14 +5,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace P2PLoan.Core.DTO_s.Loan;
-public class LoanDto
+namespace P2PLoan.Core.DTO.Loan;
+public class LoanSummaryDto
 {
     public Guid Id { get; set; }
+    public string? Title { get; set; }
     public decimal Amount { get; set; }
-    public double InterestRate { get; set; }
-    public int DurationMonths { get; set; }
+    public decimal FundedAmount { get; set; }
+    public int DurationDays { get; set; }
+    public decimal InterestRate { get; set; }
     public LoanStatus Status { get; set; }
-    public DateTime CreatedAt { get; set; }
 }
-
