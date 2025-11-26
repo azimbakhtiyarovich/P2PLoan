@@ -10,6 +10,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "P2PLoan.Core", "P2PLoan.Core\P2PLoan.Core.csproj", "{299E890B-3897-4CBB-8A7D-6CDB66660525}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "P2PLoan.DataAccess", "P2PLoan.DataAccess\P2PLoan.DataAccess.csproj", "{741E0FEE-3818-4368-9AFB-B1C2F94912F9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{A16437D8-DEBF-4511-A92F-DDDF5B1CFB0C} = {A16437D8-DEBF-4511-A92F-DDDF5B1CFB0C}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "P2PLoan.Services", "P2PLoan.Services\P2PLoan.Services.csproj", "{A16437D8-DEBF-4511-A92F-DDDF5B1CFB0C}"
 EndProject
