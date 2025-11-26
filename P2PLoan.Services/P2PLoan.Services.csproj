@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\P2PLoan.Core\P2PLoan.Core.csproj" />
+    <ProjectReference Include="..\P2PLoan.DataAccess\P2PLoan.DataAccess.csproj" />
   </ItemGroup>
 
 </Project>
