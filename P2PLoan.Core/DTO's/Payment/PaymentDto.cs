@@ -1,4 +1,4 @@
-﻿using P2PLoan.Core.Enum_s;
+﻿using P2PLoan.Core.Enum;
 
 namespace P2PLoan.Core.DTO_s.Payment;
 public class PaymentDto

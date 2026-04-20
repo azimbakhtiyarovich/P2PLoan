@@ -1,4 +1,4 @@
-﻿using P2PLoan.Core.Enum_s;
+﻿using P2PLoan.Core.Enum;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;

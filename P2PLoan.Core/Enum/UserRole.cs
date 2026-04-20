@@ -1,8 +1,7 @@
-﻿namespace P2PLoan.Core.Enum_s;
-public enum UserRole
+namespace P2PLoan.Core.Enum;
+public enum UserRoleType
 {
     Borrower,
     Lender,
     Admin
 }
-

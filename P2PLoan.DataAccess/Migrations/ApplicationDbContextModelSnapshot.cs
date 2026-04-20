@@ -22,6 +22,45 @@ namespace P2PLoan.DataAccess.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("P2PLoan.Core.Entities.AuditLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DetailsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("EntityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("PerformedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("EntityType", "EntityId");
+
+                    b.ToTable("AuditLogs");
+                });
+
             modelBuilder.Entity("P2PLoan.Core.Entities.BorrowerProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -31,12 +70,23 @@ namespace P2PLoan.DataAccess.Migrations
                     b.Property<DateTime?>("BirthDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("IncomeLevel")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<short>("CreditRating")
+                        .HasColumnType("smallint");
+
+                    b.Property<int?>("CreditScore")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("ExistingDebt")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<short>("KycStatus")
                         .HasColumnType("smallint");
+
+                    b.Property<DateTimeOffset?>("LastScoredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<decimal>("MonthlyIncome")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("PassportIssuedDate")
                         .HasColumnType("datetime2");
@@ -50,7 +100,8 @@ namespace P2PLoan.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("BorrowerProfiles");
                 });
@@ -70,9 +121,6 @@ namespace P2PLoan.DataAccess.Migrations
                     b.Property<Guid>("LenderId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("LenderProfileId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<Guid>("LoanId")
                         .HasColumnType("uniqueidentifier");
 
@@ -83,11 +131,9 @@ namespace P2PLoan.DataAccess.Migrations
 
                     b.HasIndex("LenderId");
 
-                    b.HasIndex("LenderProfileId");
-
                     b.HasIndex("LoanId");
 
-                    b.ToTable("Investment");
+                    b.ToTable("Investments");
                 });
 
             modelBuilder.Entity("P2PLoan.Core.Entities.KycDocument", b =>
@@ -103,7 +149,8 @@ namespace P2PLoan.DataAccess.Migrations
 
                     b.Property<string>("FilePath")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTimeOffset?>("ReviewedAt")
                         .HasColumnType("datetimeoffset");
@@ -121,7 +168,7 @@ namespace P2PLoan.DataAccess.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("KycDocument");
+                    b.ToTable("KycDocuments");
                 });
 
             modelBuilder.Entity("P2PLoan.Core.Entities.LenderProfile", b =>
@@ -141,7 +188,8 @@ namespace P2PLoan.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("LenderProfiles");
                 });
@@ -198,6 +246,8 @@ namespace P2PLoan.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BorrowerId");
+
+                    b.HasIndex("Status");
 
                     b.ToTable("Loans");
                 });
@@ -260,9 +310,9 @@ namespace P2PLoan.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "Read");
 
-                    b.ToTable("Notification");
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("P2PLoan.Core.Entities.Payment", b =>
@@ -298,9 +348,11 @@ namespace P2PLoan.DataAccess.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ExternalId");
+
                     b.HasIndex("UserId");
 
-                    b.ToTable("Payment");
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("P2PLoan.Core.Entities.Repayment", b =>
@@ -338,7 +390,7 @@ namespace P2PLoan.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("LoanId");
+                    b.HasIndex("LoanId", "DueDate");
 
                     b.ToTable("Repayments");
                 });
@@ -390,9 +442,9 @@ namespace P2PLoan.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("WalletId");
+                    b.HasIndex("WalletId", "CreatedAt");
 
-                    b.ToTable("Transaction");
+                    b.ToTable("Transactions");
                 });
 
             modelBuilder.Entity("P2PLoan.Core.Entities.User", b =>
@@ -453,7 +505,7 @@ namespace P2PLoan.DataAccess.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("UserProfile");
+                    b.ToTable("UserProfiles");
                 });
 
             modelBuilder.Entity("P2PLoan.Core.Entities.UserRole", b =>
@@ -488,6 +540,12 @@ namespace P2PLoan.DataAccess.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -499,14 +557,14 @@ namespace P2PLoan.DataAccess.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Wallet");
+                    b.ToTable("Wallets");
                 });
 
             modelBuilder.Entity("P2PLoan.Core.Entities.BorrowerProfile", b =>
                 {
                     b.HasOne("P2PLoan.Core.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
+                        .WithOne()
+                        .HasForeignKey("P2PLoan.Core.Entities.BorrowerProfile", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -516,14 +574,10 @@ namespace P2PLoan.DataAccess.Migrations
             modelBuilder.Entity("P2PLoan.Core.Entities.Investment", b =>
                 {
                     b.HasOne("P2PLoan.Core.Entities.LenderProfile", "Lender")
-                        .WithMany()
+                        .WithMany("Investments")
                         .HasForeignKey("LenderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("P2PLoan.Core.Entities.LenderProfile", null)
-                        .WithMany("Investments")
-                        .HasForeignKey("LenderProfileId");
 
                     b.HasOne("P2PLoan.Core.Entities.Loan", "Loan")
                         .WithMany("Investments")
@@ -550,8 +604,8 @@ namespace P2PLoan.DataAccess.Migrations
             modelBuilder.Entity("P2PLoan.Core.Entities.LenderProfile", b =>
                 {
                     b.HasOne("P2PLoan.Core.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
+                        .WithOne()
+                        .HasForeignKey("P2PLoan.Core.Entities.LenderProfile", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -563,7 +617,7 @@ namespace P2PLoan.DataAccess.Migrations
                     b.HasOne("P2PLoan.Core.Entities.BorrowerProfile", "Borrower")
                         .WithMany("Loans")
                         .HasForeignKey("BorrowerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Borrower");
@@ -601,7 +655,8 @@ namespace P2PLoan.DataAccess.Migrations
                 {
                     b.HasOne("P2PLoan.Core.Entities.User", "User")
                         .WithMany("Payments")
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("User");
                 });
@@ -644,7 +699,7 @@ namespace P2PLoan.DataAccess.Migrations
                     b.HasOne("P2PLoan.Core.Entities.Role", "Role")
                         .WithMany("UserRoles")
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("P2PLoan.Core.Entities.User", "User")

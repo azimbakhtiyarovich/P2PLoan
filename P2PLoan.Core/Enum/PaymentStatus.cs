@@ -1,5 +1,5 @@
-﻿namespace P2PLoan.Core.Enum_s;
-public enum PaymentStatus : short 
+﻿namespace P2PLoan.Core.Enum;
+public enum PaymentStatus : short
 { 
     Created = 0,
     Processing = 1, 

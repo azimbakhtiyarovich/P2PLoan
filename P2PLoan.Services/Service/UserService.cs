@@ -1,43 +1,66 @@
-﻿
 using Microsoft.EntityFrameworkCore;
+using P2PLoan.Core.DTO.Auth;
 using P2PLoan.Core.Entities;
+using P2PLoan.Core.Exceptions;
 using P2PLoan.DataAccess;
 using P2PLoan.Services.Interface;
 
 namespace P2PLoan.Services.Service;
+
 public class UserService : IUserService
 {
-    private readonly DataAccess.ApplicationDbContext _context;
+    private readonly ApplicationDbContext _context;
+
     public UserService(ApplicationDbContext context)
     {
         _context = context;
     }
-    public async Task<bool> AssignRoleAsync(Guid userId, short roleId)
+
+    public async Task<User> RegisterAsync(RegisterDto dto)
     {
-        var exists = await _context.UserRoles
-             .AnyAsync(ur => ur.UserId == userId && ur.RoleId == roleId);
+        // Telefon raqami bo'yicha tekshirish (Id bo'yicha emas — xato tuzatildi)
+        if (await _context.Users.AnyAsync(u => u.Phone == dto.PhoneNumber))
+            throw new ConflictException($"Telefon raqami allaqachon ro'yxatdan o'tgan: {dto.PhoneNumber}");
 
-        if (exists) return false;
+        // Parol kuchliligi tekshiruvi
+        ValidatePasswordStrength(dto.Password);
 
-        _context.UserRoles.Add(new UserRole
+        var user = new User
         {
-            UserId = userId,
-            RoleId = roleId,
-            AssignedAt = DateTimeOffset.UtcNow
-        });
+            Phone        = dto.PhoneNumber,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+            IsPhoneVerified = false
+        };
 
+        // UserProfile avtomatik yaratish
+        var profile = new UserProfile
+        {
+            UserId = user.Id,
+            Email  = dto.Email
+        };
+
+        // Wallet avtomatik yaratish
+        var wallet = new Wallet { UserId = user.Id };
+
+        _context.Users.Add(user);
+        _context.UserProfiles.Add(profile);
+        _context.Wallets.Add(wallet);
         await _context.SaveChangesAsync();
-        return true;
+        return user;
     }
 
-    public async Task<bool> DeleteUserAsync(Guid userId)
+    public async Task<User> LoginAsync(string phone, string rawPassword)
     {
-        var user = await _context.Users.FindAsync(userId);
-        if (user == null) return false;
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Phone == phone);
 
-        _context.Users.Remove(user);
+        // Generic xabar: xavfsizlik uchun telefon yoki parol noto'g'ri deb ko'rsatiladi
+        if (user is null || !BCrypt.Net.BCrypt.Verify(rawPassword, user.PasswordHash))
+            throw new UnauthorizedException("Telefon raqami yoki parol noto'g'ri.");
+
+        user.LastLogin = DateTimeOffset.UtcNow;
         await _context.SaveChangesAsync();
-        return true;
+        return user;
     }
 
     public async Task<User?> GetUserByIdAsync(Guid userId)
@@ -50,71 +73,93 @@ public class UserService : IUserService
         return await _context.Users.FirstOrDefaultAsync(u => u.Phone == phone);
     }
 
+    public async Task<bool> VerifyPhoneAsync(Guid userId)
+    {
+        var user = await _context.Users.FindAsync(userId);
+        if (user is null) return false;
+
+        user.IsPhoneVerified = true;
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword)
+    {
+        var user = await _context.Users.FindAsync(userId)
+            ?? throw new NotFoundException("User", userId);
+
+        if (!BCrypt.Net.BCrypt.Verify(currentPassword, user.PasswordHash))
+            throw new UnauthorizedException("Joriy parol noto'g'ri.");
+
+        ValidatePasswordStrength(newPassword);
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<IEnumerable<Role>> GetUserRolesAsync(Guid userId)
     {
         return await _context.UserRoles
-               .Where(ur => ur.UserId == userId)
-               .Select(ur => ur.Role!)
-               .ToListAsync();
+            .Where(ur => ur.UserId == userId)
+            .Select(ur => ur.Role!)
+            .ToListAsync();
     }
 
-    public async Task<User> LoginAsync(User user)
+    public async Task<bool> AssignRoleAsync(Guid userId, short roleId)
     {
-        var userr = await _context.Users
-            .FirstOrDefaultAsync(u => u.Phone == user.Phone && u.PasswordHash == user.PasswordHash);
-        if (userr == null)
-        {
-            throw new Exception("User not found or invalid credentials");
-        }
-        return userr;
-    }
+        var exists = await _context.UserRoles
+            .AnyAsync(ur => ur.UserId == userId && ur.RoleId == roleId);
 
-    public async Task<User> RegisterAsync(User dto)
-    {
-        if (await _context.Users.AnyAsync(u => u.Id == dto.Id))
-            throw new Exception("User already exists");
+        if (exists) return false;
 
-        var user = new User
+        _context.UserRoles.Add(new UserRole
         {
-            Phone = dto.Phone,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.PasswordHash),
-            IsPhoneVerified = false,
-            KycDocuments = new List<KycDocument>()
-        };
-        _context.Users.Add(user);
+            UserId     = userId,
+            RoleId     = roleId,
+            AssignedAt = DateTimeOffset.UtcNow
+        });
+
         await _context.SaveChangesAsync();
-        return user;
+        return true;
     }
 
     public async Task<bool> RemoveRoleAsync(Guid userId, short roleId)
     {
         var userRole = await _context.UserRoles
-               .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == roleId);
+            .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == roleId);
 
-        if (userRole == null) return false;
+        if (userRole is null) return false;
 
         _context.UserRoles.Remove(userRole);
         await _context.SaveChangesAsync();
         return true;
     }
 
-    public async Task<bool> UpdatePasswordAsync(Guid userId, string newHash)
+    public async Task<bool> DeleteUserAsync(Guid userId)
     {
-        var user = _context.Users.Find(userId);
-        if (user == null) return false;
+        var user = await _context.Users.FindAsync(userId);
+        if (user is null) return false;
 
-        user.PasswordHash = newHash;
+        _context.Users.Remove(user);
         await _context.SaveChangesAsync();
         return true;
     }
 
-    public async Task<bool> VerifyPhoneAsync(Guid userId)
-    {
-        var user = _context.Users.Find(userId);
-        if (user == null) return false;
+    // ── Helpers ──────────────────────────────────────────────────────────────
 
-        user.IsPhoneVerified = true;
-        await _context.SaveChangesAsync();
-        return true;
+    private static void ValidatePasswordStrength(string password)
+    {
+        var errors = new List<string>();
+
+        if (password.Length < 8)
+            errors.Add("Kamida 8 ta belgi bo'lishi kerak.");
+        if (!password.Any(char.IsUpper))
+            errors.Add("Kamida bitta katta harf bo'lishi kerak.");
+        if (!password.Any(char.IsDigit))
+            errors.Add("Kamida bitta raqam bo'lishi kerak.");
+
+        if (errors.Any())
+            throw new ValidationException("password", string.Join(" ", errors));
     }
 }
