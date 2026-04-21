@@ -1,0 +1,50 @@
+<div class="page">
+  <h2>Hamyon</h2>
+
+  <!-- Balance -->
+  <div class="card" *ngIf="balance">
+    <div class="balance-label">Joriy balans</div>
+    <div class="balance-amount">{{ balance.balance | number:'1.2-2' }} UZS</div>
+  </div>
+
+  <!-- Deposit form -->
+  <div class="card">
+    <h3>Pul qo'shish (Depozit)</h3>
+    <div class="alert-success" *ngIf="depositMsg">{{ depositMsg }}</div>
+    <div class="alert-error" *ngIf="depositError">{{ depositError }}</div>
+    <div class="form-row">
+      <input type="number" [(ngModel)]="depositAmount" placeholder="Miqdor (UZS)" min="1" />
+      <select [(ngModel)]="depositProvider">
+        <option *ngFor="let p of providers" [value]="p.value">{{ p.label }}</option>
+      </select>
+      <button (click)="deposit()" [disabled]="depositing">
+        {{ depositing ? 'Yuklanmoqda...' : 'Depozit qilish' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Transactions -->
+  <h3>Tranzaksiyalar tarixi</h3>
+  <div *ngIf="loading">Yuklanmoqda...</div>
+  <table *ngIf="!loading && transactions.length">
+    <thead>
+      <tr>
+        <th>Sana</th>
+        <th>Tur</th>
+        <th>Miqdor</th>
+        <th>Balans so'ng</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let tx of transactions">
+        <td>{{ tx.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
+        <td>{{ transactionTypeLabel(tx.type) }}</td>
+        <td [class.positive]="tx.amount > 0" [class.negative]="tx.amount < 0">
+          {{ tx.amount > 0 ? '+' : '' }}{{ tx.amount | number:'1.0-0' }}
+        </td>
+        <td>{{ tx.balanceAfter | number:'1.0-0' }}</td>
+      </tr>
+    </tbody>
+  </table>
+  <p *ngIf="!loading && !transactions.length">Tranzaksiyalar yo'q.</p>
+</div>

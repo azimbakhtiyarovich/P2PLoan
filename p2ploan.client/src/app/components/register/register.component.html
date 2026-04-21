@@ -1,0 +1,25 @@
+<div class="auth-card">
+  <h2>Ro'yxatdan o'tish</h2>
+
+  <div class="alert-error" *ngIf="error">{{ error }}</div>
+
+  <form (ngSubmit)="submit()" #f="ngForm">
+    <label>Email</label>
+    <input type="email" [(ngModel)]="email" name="email"
+           placeholder="email@example.com" required />
+
+    <label>Telefon raqam</label>
+    <input type="text" [(ngModel)]="phoneNumber" name="phoneNumber"
+           placeholder="+998901234567" required />
+
+    <label>Parol</label>
+    <input type="password" [(ngModel)]="password" name="password"
+           placeholder="Kamida 8 belgi" required />
+
+    <button type="submit" [disabled]="loading">
+      {{ loading ? 'Yuklanmoqda...' : 'Ro\'yxatdan o\'tish' }}
+    </button>
+  </form>
+
+  <p>Hisobingiz bormi? <a routerLink="/login">Kirish</a></p>
+</div>

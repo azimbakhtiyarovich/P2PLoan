@@ -1,0 +1,39 @@
+<div class="page">
+  <h2>Mening investitsiyalarim</h2>
+
+  <div class="alert-success" *ngIf="withdrawMsg">{{ withdrawMsg }}</div>
+  <div class="alert-error" *ngIf="withdrawError">{{ withdrawError }}</div>
+  <div class="alert-error" *ngIf="error">{{ error }}</div>
+  <div *ngIf="loading">Yuklanmoqda...</div>
+
+  <table *ngIf="!loading && investments.length">
+    <thead>
+      <tr>
+        <th>Sana</th>
+        <th>Miqdor (UZS)</th>
+        <th>Loan ID</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let inv of investments">
+        <td>{{ inv.investedAt | date:'dd.MM.yyyy HH:mm' }}</td>
+        <td>{{ inv.amount | number:'1.0-0' }}</td>
+        <td>
+          <a *ngIf="inv.loanId" [routerLink]="['/loans', inv.loanId]">
+            {{ inv.loanId!.substring(0, 8) }}...
+          </a>
+          <span *ngIf="!inv.loanId">—</span>
+        </td>
+        <td>
+          <button class="btn-sm btn-danger" (click)="withdraw(inv.id)">Qaytarish</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p *ngIf="!loading && !investments.length">
+    Siz hali hech qanday investitsiya qilmagansiz.
+    <a routerLink="/loans">Loanlarni ko'rish →</a>
+  </p>
+</div>

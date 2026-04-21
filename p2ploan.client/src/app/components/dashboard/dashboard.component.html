@@ -1,0 +1,63 @@
+<div class="page">
+  <h2>Bosh sahifa</h2>
+
+  <!-- Wallet balance -->
+  <div class="card" *ngIf="balance">
+    <div class="balance-label">Hamyon balansi</div>
+    <div class="balance-amount">{{ balance.balance | number:'1.2-2' }} UZS</div>
+    <a routerLink="/wallet" class="btn-link">Hamyon →</a>
+  </div>
+
+  <!-- Quick actions -->
+  <div class="quick-actions">
+    <a routerLink="/loans" class="card action-card">
+      <strong>Loanlar</strong>
+      <span>Investitsiya qilish uchun ochiq loanlar</span>
+    </a>
+    <a routerLink="/my-loans" class="card action-card">
+      <strong>Mening loanlarim</strong>
+      <span>Yuborgan va aktiv loanlarim</span>
+    </a>
+    <a routerLink="/create-loan" class="card action-card">
+      <strong>Loan yaratish</strong>
+      <span>Yangi qarz so'rovi</span>
+    </a>
+    <a routerLink="/investments" class="card action-card">
+      <strong>Investitsiyalarim</strong>
+      <span>Qo'ygan investitsiyalarim</span>
+    </a>
+  </div>
+
+  <!-- Recent open loans -->
+  <h3>So'nggi ochiq loanlar</h3>
+  <div *ngIf="loading">Yuklanmoqda...</div>
+  <table *ngIf="!loading && loans.length">
+    <thead>
+      <tr>
+        <th>Nomi</th>
+        <th>Summa</th>
+        <th>Moliyalashtirish</th>
+        <th>Muddati</th>
+        <th>Foiz</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let loan of loans">
+        <td>{{ loan.title || '—' }}</td>
+        <td>{{ loan.amount | number:'1.0-0' }}</td>
+        <td>
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="fundingPercent(loan)"></div>
+          </div>
+          <small>{{ fundingPercent(loan) }}%</small>
+        </td>
+        <td>{{ loan.durationDays }} kun</td>
+        <td>{{ loan.interestRate }}%</td>
+        <td><a [routerLink]="['/loans', loan.id]">Ko'rish</a></td>
+      </tr>
+    </tbody>
+  </table>
+  <p *ngIf="!loading && !loans.length">Hozircha ochiq loan yo'q.</p>
+  <a routerLink="/loans" *ngIf="loans.length">Barchasini ko'rish →</a>
+</div>

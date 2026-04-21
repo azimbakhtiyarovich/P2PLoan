@@ -1,1 +1,250 @@
-/* You can add global styles to this file, and also import other style files */
+/* ── Reset & Base ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  background: #f5f7fa;
+  color: #1a202c;
+  line-height: 1.5;
+}
+
+a { color: #3b82f6; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Navbar ──────────────────────────────────────────── */
+.navbar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 24px;
+  height: 56px;
+  background: #1e293b;
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navbar .brand {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin-right: 8px;
+}
+
+.nav-links { display: flex; gap: 16px; flex: 1; }
+.nav-links a { color: #94a3b8; font-size: 13px; }
+.nav-links a:hover, .nav-links a.active { color: #fff; text-decoration: none; }
+
+.nav-auth { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.nav-auth a { color: #94a3b8; font-size: 13px; }
+.nav-auth a:hover { color: #fff; }
+.nav-user { font-size: 12px; color: #64748b; }
+
+/* ── Page Layout ─────────────────────────────────────── */
+main { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+
+.page { display: flex; flex-direction: column; gap: 16px; }
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+h2 { font-size: 20px; font-weight: 600; color: #1e293b; }
+h3 { font-size: 16px; font-weight: 600; color: #334155; }
+
+/* ── Card ────────────────────────────────────────────── */
+.card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.action-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-decoration: none;
+  transition: box-shadow 0.15s;
+}
+.action-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-decoration: none; }
+.action-card strong { color: #1e293b; font-size: 14px; }
+.action-card span { color: #64748b; font-size: 12px; }
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+/* ── Balance ─────────────────────────────────────────── */
+.balance-label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+.balance-amount { font-size: 28px; font-weight: 700; color: #0f172a; margin: 4px 0 8px; }
+
+/* ── Auth Card ───────────────────────────────────────── */
+.auth-card {
+  max-width: 400px;
+  margin: 48px auto;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.auth-card h2 { text-align: center; }
+.auth-card p { text-align: center; font-size: 13px; color: #64748b; margin-top: 8px; }
+
+/* ── Forms ───────────────────────────────────────────── */
+form { display: flex; flex-direction: column; gap: 8px; }
+
+label { font-size: 12px; font-weight: 600; color: #475569; margin-top: 4px; }
+
+input, select, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #fff;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus { border-color: #3b82f6; }
+textarea { resize: vertical; }
+
+.inline-form { display: flex; gap: 8px; align-items: center; }
+.inline-form input { flex: 1; }
+
+.form-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.form-row input, .form-row select { flex: 1; min-width: 120px; }
+
+/* ── Buttons ─────────────────────────────────────────── */
+button, .btn-sm {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: #3b82f6;
+  color: #fff;
+  transition: background 0.15s;
+  white-space: nowrap;
+  display: inline-block;
+}
+button:hover, .btn-sm:hover { background: #2563eb; text-decoration: none; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-danger { background: #ef4444; }
+.btn-danger:hover { background: #dc2626; }
+.btn-success { background: #10b981; }
+.btn-success:hover { background: #059669; }
+
+.btn-link { color: #3b82f6; font-size: 13px; font-weight: 500; }
+
+/* ── Alerts ──────────────────────────────────────────── */
+.alert-error {
+  padding: 10px 12px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+.alert-success {
+  padding: 10px 12px;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 6px;
+  color: #15803d;
+  font-size: 13px;
+}
+
+/* ── Table ───────────────────────────────────────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+th {
+  background: #f8fafc;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f8fafc; }
+
+/* ── Progress Bar ────────────────────────────────────── */
+.progress-bar {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 2px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #3b82f6;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+/* ── Badge ───────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* ── Detail Grid ─────────────────────────────────────── */
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* ── Misc ────────────────────────────────────────────── */
+.mt-8 { margin-top: 8px; }
+small { font-size: 11px; color: #64748b; }
+
+.positive { color: #15803d; font-weight: 600; }
+.negative { color: #b91c1c; font-weight: 600; }
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}

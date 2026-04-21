@@ -1,0 +1,39 @@
+<div class="page">
+  <a routerLink="/my-loans">← Orqaga</a>
+  <h2>Yangi loan yaratish</h2>
+
+  <div class="alert-success" *ngIf="success">{{ success }}</div>
+  <div class="alert-error" *ngIf="error">{{ error }}</div>
+
+  <div class="card">
+    <form (ngSubmit)="submit()">
+      <label>Nomi (ixtiyoriy)</label>
+      <input type="text" [(ngModel)]="form.title" name="title" placeholder="Loan nomi" />
+
+      <label>Tavsif (ixtiyoriy)</label>
+      <textarea [(ngModel)]="form.description" name="description" rows="3"
+                placeholder="Loan maqsadi haqida qisqacha..."></textarea>
+
+      <label>Summa (UZS) *</label>
+      <input type="number" [(ngModel)]="form.amount" name="amount"
+             placeholder="1000000" min="1" required />
+
+      <label>Muddat (kun) *</label>
+      <input type="number" [(ngModel)]="form.durationDays" name="durationDays"
+             placeholder="30" min="1" required />
+
+      <label>Yillik foiz (%) *</label>
+      <input type="number" [(ngModel)]="form.interestRate" name="interestRate"
+             placeholder="12" min="0" step="0.1" required />
+
+      <label>To'lov chastotasi</label>
+      <select [(ngModel)]="form.frequency" name="frequency">
+        <option *ngFor="let f of frequencies" [value]="f.value">{{ f.label }}</option>
+      </select>
+
+      <button type="submit" [disabled]="loading">
+        {{ loading ? 'Yaratilmoqda...' : 'Loan yaratish' }}
+      </button>
+    </form>
+  </div>
+</div>

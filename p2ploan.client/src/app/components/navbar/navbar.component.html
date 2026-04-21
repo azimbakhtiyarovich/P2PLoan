@@ -1,0 +1,21 @@
+<nav class="navbar">
+  <a class="brand" routerLink="/">P2P Loan</a>
+
+  <div class="nav-links" *ngIf="auth.isLoggedIn">
+    <a routerLink="/loans" routerLinkActive="active">Loanlar</a>
+    <a routerLink="/my-loans" routerLinkActive="active">Mening loanlarim</a>
+    <a routerLink="/investments" routerLinkActive="active">Investitsiyalar</a>
+    <a routerLink="/wallet" routerLinkActive="active">Hamyon</a>
+  </div>
+
+  <div class="nav-auth">
+    <ng-container *ngIf="auth.isLoggedIn; else guestLinks">
+      <span class="nav-user">{{ user?.activeRole }}</span>
+      <button class="btn-sm" (click)="logout()">Chiqish</button>
+    </ng-container>
+    <ng-template #guestLinks>
+      <a routerLink="/login">Kirish</a>
+      <a routerLink="/register">Ro'yxatdan o'tish</a>
+    </ng-template>
+  </div>
+</nav>
