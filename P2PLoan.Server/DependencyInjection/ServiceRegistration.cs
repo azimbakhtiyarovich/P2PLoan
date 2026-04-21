@@ -20,6 +20,7 @@ public static class ServiceRegistration
         services.AddScoped<IAuditService,         AuditService>();
         services.AddScoped<ICreditScoringService, CreditScoringService>();
         services.AddScoped<IJwtService,           JwtService>();
+        services.AddScoped<IProfileService,       ProfileService>();
 
         return services;
     }

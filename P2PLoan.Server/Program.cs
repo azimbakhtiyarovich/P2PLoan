@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using P2PLoan.DataAccess;
 using P2PLoan.Server.DependencyInjection;
 using P2PLoan.Server.Middleware;
+using P2PLoan.Services.Service;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,6 +13,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // ── 2. Application Services ───────────────────────────────────────────────────
 builder.Services.AddApplicationServices();
+builder.Services.AddHostedService<OverdueDetectionService>();
 
 // ── 3. JWT Authentication ─────────────────────────────────────────────────────
 builder.Services.AddJwtAuthentication(builder.Configuration);

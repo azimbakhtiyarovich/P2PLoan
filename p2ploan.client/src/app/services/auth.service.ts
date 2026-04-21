@@ -20,9 +20,9 @@ export class AuthService {
     return !!this.token;
   }
 
-  register(email: string, phoneNumber: string, password: string) {
+  register(email: string, phoneNumber: string, password: string, role: number = 0) {
     return this.http
-      .post<AuthResponse>('/api/auth/register', { email, phoneNumber, password })
+      .post<AuthResponse>('/api/auth/register', { email, phoneNumber, password, role })
       .pipe(tap(res => this.save(res)));
   }
 

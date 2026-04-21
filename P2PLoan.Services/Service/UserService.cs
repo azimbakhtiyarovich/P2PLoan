@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using P2PLoan.Core.DTO.Auth;
 using P2PLoan.Core.Entities;
+using P2PLoan.Core.Enum;
 using P2PLoan.Core.Exceptions;
 using P2PLoan.DataAccess;
 using P2PLoan.Services.Interface;
@@ -18,33 +19,56 @@ public class UserService : IUserService
 
     public async Task<User> RegisterAsync(RegisterDto dto)
     {
-        // Telefon raqami bo'yicha tekshirish (Id bo'yicha emas — xato tuzatildi)
+        // Input validation first
         if (await _context.Users.AnyAsync(u => u.Phone == dto.PhoneNumber))
             throw new ConflictException($"Telefon raqami allaqachon ro'yxatdan o'tgan: {dto.PhoneNumber}");
 
-        // Parol kuchliligi tekshiruvi
+        if (await _context.UserProfiles.AnyAsync(up => up.Email == dto.Email))
+            throw new ConflictException($"Email allaqachon ro'yxatdan o'tgan: {dto.Email}");
+
         ValidatePasswordStrength(dto.Password);
 
         var user = new User
         {
-            Phone        = dto.PhoneNumber,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+            Phone           = dto.PhoneNumber,
+            PasswordHash    = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             IsPhoneVerified = false
         };
 
-        // UserProfile avtomatik yaratish
         var profile = new UserProfile
         {
             UserId = user.Id,
             Email  = dto.Email
         };
 
-        // Wallet avtomatik yaratish
         var wallet = new Wallet { UserId = user.Id };
 
         _context.Users.Add(user);
         _context.UserProfiles.Add(profile);
         _context.Wallets.Add(wallet);
+
+        // Rol va profil yaratish
+        var roleId = (short)dto.Role;
+        var roleExists = await _context.Roles.AnyAsync(r => r.Id == roleId);
+        if (roleExists)
+        {
+            _context.UserRoles.Add(new UserRole
+            {
+                UserId     = user.Id,
+                RoleId     = roleId,
+                AssignedAt = DateTimeOffset.UtcNow
+            });
+        }
+
+        if (dto.Role == RoleType.Borrower)
+        {
+            _context.BorrowerProfiles.Add(new BorrowerProfile { UserId = user.Id });
+        }
+        else if (dto.Role == RoleType.Lender)
+        {
+            _context.LenderProfiles.Add(new LenderProfile { UserId = user.Id });
+        }
+
         await _context.SaveChangesAsync();
         return user;
     }
@@ -139,9 +163,11 @@ public class UserService : IUserService
     public async Task<bool> DeleteUserAsync(Guid userId)
     {
         var user = await _context.Users.FindAsync(userId);
-        if (user is null) return false;
+        if (user is null || user.IsDeleted) return false;
 
-        _context.Users.Remove(user);
+        user.IsDeleted  = true;
+        user.DeletedAt  = DateTimeOffset.UtcNow;
+        user.Phone      = $"DELETED_{userId}_{user.Phone}"; // Prevent phone reuse
         await _context.SaveChangesAsync();
         return true;
     }
