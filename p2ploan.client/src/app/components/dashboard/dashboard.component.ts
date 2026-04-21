@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { AuthService } from '../../services/auth.service';
+import { AuthService, UserSession } from '../../services/auth.service';
 import { WalletService } from '../../services/wallet.service';
 import { LoanService } from '../../services/loan.service';
-import { AuthResponse, LoanSummary, WalletBalance, loanStatusLabel } from '../../models';
+import { LoanSummary, WalletBalance, loanStatusLabel } from '../../models';
 
 @Component({
   selector: 'app-dashboard',
@@ -10,7 +10,7 @@ import { AuthResponse, LoanSummary, WalletBalance, loanStatusLabel } from '../..
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent implements OnInit {
-  user: AuthResponse | null = null;
+  user: UserSession | null = null;
   balance: WalletBalance | null = null;
   loans: LoanSummary[] = [];
   loading = true;
