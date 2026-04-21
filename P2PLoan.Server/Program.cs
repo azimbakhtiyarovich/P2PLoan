@@ -3,6 +3,7 @@ using P2PLoan.DataAccess;
 using P2PLoan.Server.DependencyInjection;
 using P2PLoan.Server.Filters;
 using P2PLoan.Server.Middleware;
+using P2PLoan.Services.Service;
 using Scalar.AspNetCore;
 using System.Threading.RateLimiting;
 
@@ -14,6 +15,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // ── 2. Application Services ───────────────────────────────────────────────────
 builder.Services.AddApplicationServices();
+builder.Services.AddHostedService<OverdueDetectionService>();
 
 // ── 3. JWT Authentication (cookie-based) ─────────────────────────────────────
 builder.Services.AddJwtAuthentication(builder.Configuration);

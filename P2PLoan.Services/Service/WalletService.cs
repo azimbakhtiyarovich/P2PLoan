@@ -30,20 +30,21 @@ public class WalletService : IWalletService
     }
 
     public async Task<Wallet> DepositAsync(
-        Guid userId, decimal amount, Guid? referenceId = null, string? meta = null)
+        Guid userId, decimal amount, TransactionType txType = TransactionType.Deposit,
+        Guid? referenceId = null, string? meta = null)
     {
         if (amount <= 0)
             throw new ValidationException("amount", "Depozit summasi musbat bo'lishi kerak.");
 
         var wallet = await GetOrCreateWalletAsync(userId);
 
-        wallet.Balance += amount;
-        wallet.UpdatedAt = DateTimeOffset.UtcNow;
+        wallet.Balance   += amount;
+        wallet.UpdatedAt  = DateTimeOffset.UtcNow;
 
         _context.Transactions.Add(new Transaction
         {
             WalletId     = wallet.Id,
-            Type         = TransactionType.Deposit,
+            Type         = txType,
             Amount       = amount,
             BalanceAfter = wallet.Balance,
             ReferenceId  = referenceId,

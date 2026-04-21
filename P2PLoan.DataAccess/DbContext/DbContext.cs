@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using P2PLoan.Core.Entities;
+using P2PLoan.Core.Enum;
 
 namespace P2PLoan.DataAccess;
 
@@ -41,6 +42,11 @@ public class ApplicationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // ── Role PK — ValueGeneratedNever so Id=0 is valid for seeding ───────
+        modelBuilder.Entity<Role>()
+            .Property(r => r.Id)
+            .ValueGeneratedNever();
 
         // ── UserRole composite PK ──────────────────────────────────────────
         modelBuilder.Entity<UserRole>()
@@ -174,7 +180,9 @@ public class ApplicationDbContext : DbContext
             .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<Payment>()
-            .HasIndex(p => p.ExternalId);
+            .HasIndex(p => p.ExternalId)
+            .IsUnique()
+            .HasFilter("[ExternalId] IS NOT NULL"); // NULL dagi duplicate ruxsat
 
         // ── Notification ───────────────────────────────────────────────────
         modelBuilder.Entity<Notification>()
@@ -192,5 +200,16 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<AuditLog>()
             .HasIndex(a => a.CreatedAt);
+
+        // ── User soft delete global query filter ───────────────────────────
+        modelBuilder.Entity<User>()
+            .HasQueryFilter(u => !u.IsDeleted);
+
+        // ── Role seeding ───────────────────────────────────────────────────
+        modelBuilder.Entity<Role>().HasData(
+            new Role { Id = 0, Name = "Borrower" },
+            new Role { Id = 1, Name = "Lender"   },
+            new Role { Id = 2, Name = "Admin"     }
+        );
     }
 }

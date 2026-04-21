@@ -10,7 +10,7 @@ public interface IWalletService
     Task<Wallet> GetOrCreateWalletAsync(Guid userId);
 
     /// <summary>Hisobga pul kirim qiladi va Transaction yozadi.</summary>
-    Task<Wallet> DepositAsync(Guid userId, decimal amount, Guid? referenceId = null, string? meta = null);
+    Task<Wallet> DepositAsync(Guid userId, decimal amount, TransactionType txType = TransactionType.Deposit, Guid? referenceId = null, string? meta = null);
 
     /// <summary>
     /// Hisobdan pul chiqaradi. Mablag' yetarli bo'lmasa InsufficientFundsException.

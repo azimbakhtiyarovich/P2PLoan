@@ -25,22 +25,10 @@ export class AuthService {
     return !!this.currentUser$.value;
   }
 
-  /**
-   * Sahifa yuklanganda cookie hali ham amal qilishini tekshiradi.
-   * AppComponent.ngOnInit() dan bir marta chaqiriladi.
-   */
-  checkSession(): Observable<UserSession | null> {
-    return this.http.get<UserSession>('/api/auth/me').pipe(
-      tap(session => {
-        this.currentUser$.next(session);
-        this._initialized$.next(true);
-      }),
-      catchError(() => {
-        this.currentUser$.next(null);
-        this._initialized$.next(true);
-        return of(null);
-      })
-    );
+  register(email: string, phoneNumber: string, password: string, role: number = 0) {
+    return this.http
+      .post<AuthResponse>('/api/auth/register', { email, phoneNumber, password, role })
+      .pipe(tap(res => this.save(res)));
   }
 
   register(email: string, phoneNumber: string, password: string): Observable<UserSession> {

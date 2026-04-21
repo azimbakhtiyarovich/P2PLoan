@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using P2PLoan.Core.Entities;
 using P2PLoan.Core.Exceptions;
 using P2PLoan.DataAccess;
@@ -9,22 +10,26 @@ namespace P2PLoan.Services.Service;
 public class NotificationService : INotificationService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public NotificationService(ApplicationDbContext context)
+    public NotificationService(ApplicationDbContext context, IServiceScopeFactory scopeFactory)
     {
-        _context = context;
+        _context      = context;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task SendAsync(Guid userId, string title, string message)
     {
-        _context.Notifications.Add(new Notification
+        using var scope = _scopeFactory.CreateScope();
+        var ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        ctx.Notifications.Add(new Notification
         {
             UserId  = userId,
             Title   = title,
             Message = message,
             Read    = false
         });
-        await _context.SaveChangesAsync();
+        await ctx.SaveChangesAsync();
     }
 
     public async Task MarkAsReadAsync(Guid notificationId, Guid userId)

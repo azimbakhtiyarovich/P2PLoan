@@ -24,6 +24,8 @@ public class Loan
     public DateTimeOffset? StartDate { get; set; } // when Active
     public bool AcceptedByBorrower { get; set; } = false;
 
+    [Timestamp] public byte[] RowVersion { get; set; } = null!;
+
     // nav
     public BorrowerProfile? Borrower { get; set; }
     public ICollection<LoanOffer> Offers { get; set; } = new List<LoanOffer>();

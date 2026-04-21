@@ -29,16 +29,18 @@ public class LoanService : ILoanService
 
     public async Task<Loan> CreateLoanAsync(CreateLoanDto dto, Guid borrowerProfileId)
     {
-        // 1. Credit check
-        await _creditScoring.EnsureEligibleAsync(borrowerProfileId, dto.Amount);
-
-        // 2. Validatsiya
+        // 1. Validatsiya BIRINCHI (credit check dan oldin — FIX #13)
         if (dto.Amount <= 0)
             throw new ValidationException("amount", "Kredit summasi musbat bo'lishi kerak.");
         if (dto.InterestRate is < 1 or > 100)
             throw new ValidationException("interestRate", "Foiz stavkasi 1-100% orasida bo'lishi kerak.");
         if (dto.DurationDays < 7)
             throw new ValidationException("durationDays", "Kredit muddati kamida 7 kun bo'lishi kerak.");
+        if (dto.MinContribution.HasValue && dto.MinContribution.Value > dto.Amount)
+            throw new ValidationException("minContribution", "Minimal investitsiya miqdori kredit summasidan oshmasligi kerak.");
+
+        // 2. Credit check (validatsiyadan keyin)
+        await _creditScoring.EnsureEligibleAsync(borrowerProfileId, dto.Amount);
 
         var profile = await _context.BorrowerProfiles
             .FirstOrDefaultAsync(bp => bp.Id == borrowerProfileId)
@@ -102,6 +104,7 @@ public class LoanService : ILoanService
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Include(l => l.Borrower)
+            .AsSplitQuery()
             .ToListAsync();
     }
 
@@ -113,13 +116,14 @@ public class LoanService : ILoanService
 
         ValidateStateTransition(loan.Status, newStatus);
 
+        var oldStatus = loan.Status; // capture BEFORE changing — FIX #13
         loan.Status = newStatus;
         if (newStatus == LoanStatus.Active)
             loan.StartDate = DateTimeOffset.UtcNow;
 
         await _context.SaveChangesAsync();
         await _audit.LogAsync("Loan", loanId, $"StatusChanged:{newStatus}", performedBy,
-            new { From = loan.Status, To = newStatus });
+            new { From = oldStatus, To = newStatus });
 
         return true;
     }
@@ -192,7 +196,7 @@ public class LoanService : ILoanService
             _context.Repayments.Add(new Repayment
             {
                 LoanId          = loan.Id,
-                DueDate         = dueDate.DateTime,
+                DueDate         = dueDate,
                 PrincipalAmount = actualPrincipal,
                 InterestAmount  = interest,
                 Amount          = actualPrincipal + interest,

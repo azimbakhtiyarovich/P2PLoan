@@ -78,28 +78,34 @@ public class CreditScoringService : ICreditScoringService
             .FirstOrDefaultAsync(bp => bp.Id == borrowerProfileId)
             ?? throw new NotFoundException("BorrowerProfile", borrowerProfileId);
 
-        // Agar ball hali hisoblanmagan bo'lsa — yangilash
-        if (profile.CreditScore is null || profile.LastScoredAt < DateTimeOffset.UtcNow.AddDays(-30))
-            await CalculateAndSaveAsync(borrowerProfileId);
+        // Agar ball eskirgan yoki yo'q bo'lsa — yangilash
+        var needsRecalc = profile.CreditScore is null
+            || profile.LastScoredAt < DateTimeOffset.UtcNow.AddDays(-30);
 
-        // Re-fetch after possible recalc
-        profile = await _context.BorrowerProfiles.AsNoTracking()
-            .FirstAsync(bp => bp.Id == borrowerProfileId);
-
-        var score = profile.CreditScore ?? 300;
-
-        // Katta kredit uchun yuqoriroq ball talab qilinadi
-        int required = loanAmount switch
+        if (needsRecalc)
         {
-            <= 5_000_000m => MinEligibleScore,         // ≤5M UZS
-            <= 20_000_000m => 550,                     // ≤20M UZS
-            <= 50_000_000m => 600,                     // ≤50M UZS
-            _ => 650                                    // >50M UZS
-        };
+            var result = await CalculateAndSaveAsync(borrowerProfileId);
+            // result dan to'g'ridan-to'g'ri foydalanamiz — re-fetch kerak emas
+            var score2    = result.Score;
+            var required2 = GetRequiredScore(loanAmount);
+            if (score2 < required2)
+                throw new CreditCheckFailedException(score2, required2);
+            return;
+        }
 
+        var score    = profile.CreditScore ?? 300;
+        var required = GetRequiredScore(loanAmount);
         if (score < required)
             throw new CreditCheckFailedException(score, required);
     }
+
+    private static int GetRequiredScore(decimal loanAmount) => loanAmount switch
+    {
+        <= 5_000_000m  => 500,
+        <= 20_000_000m => 550,
+        <= 50_000_000m => 600,
+        _              => 650
+    };
 
     // ─────────────────────────────────────────────────────────────────────────
     //  HISOBLASH LOGIKASI
