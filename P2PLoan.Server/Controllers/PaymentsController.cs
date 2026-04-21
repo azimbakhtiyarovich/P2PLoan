@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using P2PLoan.Core.DTO.Payment;
 using P2PLoan.Core.Enum;
 using P2PLoan.Core.Exceptions;
+using P2PLoan.Server.Filters;
 using P2PLoan.Services.Interface;
 using System.Security.Claims;
 
@@ -39,9 +40,13 @@ public class PaymentsController : ControllerBase
         });
     }
 
-    /// <summary>Provider callback (Payme / Click / UzumPay dan keladi).</summary>
+    /// <summary>
+    /// Provider callback (Payme / Click / UzumPay dan keladi).
+    /// HMAC-SHA256 imzo tekshiriladi: X-Webhook-Signature: sha256=&lt;hex&gt;
+    /// </summary>
     [HttpPost("callback")]
-    [AllowAnonymous] // Provider dan keladi - token yo'q
+    [AllowAnonymous]                                // Provider dan keladi — token yo'q
+    [ServiceFilter(typeof(ValidateWebhookSignatureFilter))]  // HMAC imzo tekshiruvi
     public async Task<IActionResult> Callback([FromBody] PaymentCallbackDto dto)
     {
         await _paymentService.ProcessCallbackAsync(dto);
