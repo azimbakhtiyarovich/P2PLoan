@@ -7,6 +7,7 @@
     <SpaRoot>..\p2ploan.client</SpaRoot>
     <SpaProxyLaunchCommand>npm start</SpaProxyLaunchCommand>
     <SpaProxyServerUrl>https://localhost:59798</SpaProxyServerUrl>
+    <UserSecretsId>2d133e8b-c7d2-4beb-8447-99c4f449a80c</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
