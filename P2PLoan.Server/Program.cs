@@ -5,9 +5,16 @@ using P2PLoan.Server.Filters;
 using P2PLoan.Server.Middleware;
 using P2PLoan.Services.Service;
 using Scalar.AspNetCore;
+using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 
 // ── 1. Database ───────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<ApplicationDbContext>(options =>

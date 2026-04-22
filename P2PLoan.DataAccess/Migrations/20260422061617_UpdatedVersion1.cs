@@ -3,20 +3,39 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace P2PLoan.DataAccess.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class UpdatedVersion1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "AuditLogs",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    EntityType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    EntityId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Action = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    PerformedBy = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    DetailsJson = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AuditLogs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Roles",
                 columns: table => new
                 {
-                    Id = table.Column<short>(type: "smallint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Id = table.Column<short>(type: "smallint", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
                 },
                 constraints: table =>
@@ -30,10 +49,12 @@ namespace P2PLoan.DataAccess.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Phone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsPhoneVerified = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    LastLogin = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true)
+                    LastLogin = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -49,8 +70,12 @@ namespace P2PLoan.DataAccess.Migrations
                     PassportNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     PassportIssuedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     BirthDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IncomeLevel = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    KycStatus = table.Column<short>(type: "smallint", nullable: false)
+                    KycStatus = table.Column<short>(type: "smallint", nullable: false),
+                    MonthlyIncome = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ExistingDebt = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    CreditScore = table.Column<int>(type: "int", nullable: true),
+                    CreditRating = table.Column<short>(type: "smallint", nullable: false),
+                    LastScoredAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -64,22 +89,22 @@ namespace P2PLoan.DataAccess.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "KycDocument",
+                name: "KycDocuments",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     DocType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    FilePath = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FilePath = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     Status = table.Column<short>(type: "smallint", nullable: false),
                     SubmittedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     ReviewedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_KycDocument", x => x.Id);
+                    table.PrimaryKey("PK_KycDocuments", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_KycDocument_Users_UserId",
+                        name: "FK_KycDocuments_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -107,7 +132,7 @@ namespace P2PLoan.DataAccess.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Notification",
+                name: "Notifications",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -119,9 +144,9 @@ namespace P2PLoan.DataAccess.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Notification", x => x.Id);
+                    table.PrimaryKey("PK_Notifications", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Notification_Users_UserId",
+                        name: "FK_Notifications_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -129,7 +154,7 @@ namespace P2PLoan.DataAccess.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Payment",
+                name: "Payments",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -144,16 +169,17 @@ namespace P2PLoan.DataAccess.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Payment", x => x.Id);
+                    table.PrimaryKey("PK_Payments", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Payment_Users_UserId",
+                        name: "FK_Payments_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
-                name: "UserProfile",
+                name: "UserProfiles",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -165,9 +191,9 @@ namespace P2PLoan.DataAccess.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_UserProfile", x => x.Id);
+                    table.PrimaryKey("PK_UserProfiles", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_UserProfile_Users_UserId",
+                        name: "FK_UserProfiles_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -190,7 +216,7 @@ namespace P2PLoan.DataAccess.Migrations
                         column: x => x.RoleId,
                         principalTable: "Roles",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_UserRoles_Users_UserId",
                         column: x => x.UserId,
@@ -200,20 +226,21 @@ namespace P2PLoan.DataAccess.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Wallet",
+                name: "Wallets",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Balance = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Currency = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
-                    UpdatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Wallet", x => x.Id);
+                    table.PrimaryKey("PK_Wallets", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Wallet_Users_UserId",
+                        name: "FK_Wallets_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -238,7 +265,8 @@ namespace P2PLoan.DataAccess.Migrations
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     OpenUntil = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
                     StartDate = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
-                    AcceptedByBorrower = table.Column<bool>(type: "bit", nullable: false)
+                    AcceptedByBorrower = table.Column<bool>(type: "bit", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -248,11 +276,11 @@ namespace P2PLoan.DataAccess.Migrations
                         column: x => x.BorrowerId,
                         principalTable: "BorrowerProfiles",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Transaction",
+                name: "Transactions",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -266,17 +294,17 @@ namespace P2PLoan.DataAccess.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Transaction", x => x.Id);
+                    table.PrimaryKey("PK_Transactions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Transaction_Wallet_WalletId",
+                        name: "FK_Transactions_Wallets_WalletId",
                         column: x => x.WalletId,
-                        principalTable: "Wallet",
+                        principalTable: "Wallets",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Investment",
+                name: "Investments",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -284,25 +312,19 @@ namespace P2PLoan.DataAccess.Migrations
                     LenderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     InvestedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    PaymentId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    LenderProfileId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    PaymentId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Investment", x => x.Id);
+                    table.PrimaryKey("PK_Investments", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Investment_LenderProfiles_LenderId",
+                        name: "FK_Investments_LenderProfiles_LenderId",
                         column: x => x.LenderId,
                         principalTable: "LenderProfiles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Investment_LenderProfiles_LenderProfileId",
-                        column: x => x.LenderProfileId,
-                        principalTable: "LenderProfiles",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_Investment_Loans_LoanId",
+                        name: "FK_Investments_Loans_LoanId",
                         column: x => x.LoanId,
                         principalTable: "Loans",
                         principalColumn: "Id",
@@ -343,7 +365,7 @@ namespace P2PLoan.DataAccess.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     LoanId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    DueDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DueDate = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     PrincipalAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     InterestAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -363,35 +385,52 @@ namespace P2PLoan.DataAccess.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.InsertData(
+                table: "Roles",
+                columns: new[] { "Id", "Name" },
+                values: new object[,]
+                {
+                    { (short)0, "Borrower" },
+                    { (short)1, "Lender" },
+                    { (short)2, "Admin" }
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuditLogs_CreatedAt",
+                table: "AuditLogs",
+                column: "CreatedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuditLogs_EntityType_EntityId",
+                table: "AuditLogs",
+                columns: new[] { "EntityType", "EntityId" });
+
             migrationBuilder.CreateIndex(
                 name: "IX_BorrowerProfiles_UserId",
                 table: "BorrowerProfiles",
-                column: "UserId");
+                column: "UserId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Investment_LenderId",
-                table: "Investment",
+                name: "IX_Investments_LenderId",
+                table: "Investments",
                 column: "LenderId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Investment_LenderProfileId",
-                table: "Investment",
-                column: "LenderProfileId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Investment_LoanId",
-                table: "Investment",
+                name: "IX_Investments_LoanId",
+                table: "Investments",
                 column: "LoanId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_KycDocument_UserId",
-                table: "KycDocument",
+                name: "IX_KycDocuments_UserId",
+                table: "KycDocuments",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_LenderProfiles_UserId",
                 table: "LenderProfiles",
-                column: "UserId");
+                column: "UserId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_LoanOffers_LenderId",
@@ -409,28 +448,40 @@ namespace P2PLoan.DataAccess.Migrations
                 column: "BorrowerId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Notification_UserId",
-                table: "Notification",
+                name: "IX_Loans_Status",
+                table: "Loans",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Notifications_UserId_Read",
+                table: "Notifications",
+                columns: new[] { "UserId", "Read" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Payments_ExternalId",
+                table: "Payments",
+                column: "ExternalId",
+                unique: true,
+                filter: "[ExternalId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Payments_UserId",
+                table: "Payments",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Payment_UserId",
-                table: "Payment",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Repayments_LoanId",
+                name: "IX_Repayments_LoanId_DueDate",
                 table: "Repayments",
-                column: "LoanId");
+                columns: new[] { "LoanId", "DueDate" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Transaction_WalletId",
-                table: "Transaction",
-                column: "WalletId");
+                name: "IX_Transactions_WalletId_CreatedAt",
+                table: "Transactions",
+                columns: new[] { "WalletId", "CreatedAt" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_UserProfile_UserId",
-                table: "UserProfile",
+                name: "IX_UserProfiles_UserId",
+                table: "UserProfiles",
                 column: "UserId",
                 unique: true);
 
@@ -440,8 +491,8 @@ namespace P2PLoan.DataAccess.Migrations
                 column: "RoleId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Wallet_UserId",
-                table: "Wallet",
+                name: "IX_Wallets_UserId",
+                table: "Wallets",
                 column: "UserId",
                 unique: true);
         }
@@ -450,28 +501,31 @@ namespace P2PLoan.DataAccess.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Investment");
+                name: "AuditLogs");
 
             migrationBuilder.DropTable(
-                name: "KycDocument");
+                name: "Investments");
+
+            migrationBuilder.DropTable(
+                name: "KycDocuments");
 
             migrationBuilder.DropTable(
                 name: "LoanOffers");
 
             migrationBuilder.DropTable(
-                name: "Notification");
+                name: "Notifications");
 
             migrationBuilder.DropTable(
-                name: "Payment");
+                name: "Payments");
 
             migrationBuilder.DropTable(
                 name: "Repayments");
 
             migrationBuilder.DropTable(
-                name: "Transaction");
+                name: "Transactions");
 
             migrationBuilder.DropTable(
-                name: "UserProfile");
+                name: "UserProfiles");
 
             migrationBuilder.DropTable(
                 name: "UserRoles");
@@ -483,7 +537,7 @@ namespace P2PLoan.DataAccess.Migrations
                 name: "Loans");
 
             migrationBuilder.DropTable(
-                name: "Wallet");
+                name: "Wallets");
 
             migrationBuilder.DropTable(
                 name: "Roles");
