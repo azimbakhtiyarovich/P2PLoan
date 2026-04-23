@@ -37,14 +37,6 @@ export enum TransactionType {
   Refund = 6
 }
 
-export interface AuthResponse {
-  userId: string;
-  accessToken: string;
-  expiresAt: string;
-  roles: string[];
-  activeRole: string;
-}
-
 export interface LoanSummary {
   id: string;
   title: string;

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using P2PLoan.DataAccess;
 using P2PLoan.Server.DependencyInjection;
@@ -6,16 +7,8 @@ using P2PLoan.Server.Filters;
 using P2PLoan.Server.Middleware;
 using P2PLoan.Services.Service;
 using Scalar.AspNetCore;
-using System.Text.Json.Serialization;
-using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-    });
 
 // ── 1. Database ───────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -57,7 +50,11 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddScoped<ValidateWebhookSignatureFilter>();
 
 // ── 6. Controllers + API ──────────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddOpenApi();
 
 var app = builder.Build();

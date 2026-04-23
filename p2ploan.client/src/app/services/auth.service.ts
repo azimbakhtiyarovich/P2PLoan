@@ -11,29 +11,22 @@ export interface UserSession {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  // Token SAQLANMAYDI. Faqat UI uchun foydalanuvchi ma'lumotlari.
-  // Haqiqiy autentifikatsiya — HttpOnly cookie (backend boshqaradi).
   currentUser$ = new BehaviorSubject<UserSession | null>(null);
 
-  // Guard bu signal bilan kutadi: checkSession tugaguncha route aktivlanmaydi
   private _initialized$ = new BehaviorSubject<boolean>(false);
   readonly initialized$ = this._initialized$.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    this.checkSession();
+  }
 
   get isLoggedIn(): boolean {
     return !!this.currentUser$.value;
   }
 
-  register(email: string, phoneNumber: string, password: string, role: number = 0) {
+  register(email: string, phoneNumber: string, password: string, role: number = 0): Observable<UserSession> {
     return this.http
-      .post<AuthResponse>('/api/auth/register', { email, phoneNumber, password, role })
-      .pipe(tap(res => this.save(res)));
-  }
-
-  register(email: string, phoneNumber: string, password: string): Observable<UserSession> {
-    return this.http
-      .post<UserSession>('/api/auth/register', { email, phoneNumber, password })
+      .post<UserSession>('/api/auth/register', { email, phoneNumber, password, role })
       .pipe(tap(session => this.currentUser$.next(session)));
   }
 
@@ -47,5 +40,15 @@ export class AuthService {
     return this.http.post<{ message: string }>('/api/auth/logout', {}).pipe(
       tap(() => this.currentUser$.next(null))
     );
+  }
+
+  /** Sahifa yangilaganda cookie orqali sessiyani tiklash */
+  private checkSession() {
+    this.http.get<UserSession>('/api/auth/me').pipe(
+      catchError(() => of(null))
+    ).subscribe(session => {
+      this.currentUser$.next(session);
+      this._initialized$.next(true);
+    });
   }
 }
