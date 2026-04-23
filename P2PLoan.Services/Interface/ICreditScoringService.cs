@@ -5,18 +5,18 @@ namespace P2PLoan.Services.Interface;
 public interface ICreditScoringService
 {
     /// <summary>
-    /// Borrower uchun kredit ballini hisoblaydi va BorrowerProfile ga saqlaydi.
+    /// User uchun kredit ballini hisoblaydi va UserProfile ga saqlaydi.
     /// </summary>
-    Task<CreditScoreResultDto> CalculateAndSaveAsync(Guid borrowerProfileId);
+    Task<CreditScoreResultDto> CalculateAndSaveAsync(Guid userId);
 
     /// <summary>
     /// Oxirgi hisoblangan kredit ballini qaytaradi (yangilashmaydi).
     /// </summary>
-    Task<CreditScoreResultDto?> GetLatestScoreAsync(Guid borrowerProfileId);
+    Task<CreditScoreResultDto?> GetLatestScoreAsync(Guid userId);
 
     /// <summary>
-    /// Borrower berilgan miqdordagi qarzga layoqatli ekanini tekshiradi.
+    /// User berilgan miqdordagi qarzga layoqatli ekanini tekshiradi.
     /// Layoqatsiz bo'lsa CreditCheckFailedException otadi.
     /// </summary>
-    Task EnsureEligibleAsync(Guid borrowerProfileId, decimal loanAmount);
+    Task EnsureEligibleAsync(Guid userId, decimal loanAmount);
 }

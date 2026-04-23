@@ -27,9 +27,9 @@ public class LoanService : ILoanService
         _audit         = audit;
     }
 
-    public async Task<Loan> CreateLoanAsync(CreateLoanDto dto, Guid borrowerProfileId)
+    public async Task<Loan> CreateLoanAsync(CreateLoanDto dto, Guid userId)
     {
-        // 1. Validatsiya BIRINCHI (credit check dan oldin — FIX #13)
+        // 1. Validatsiya
         if (dto.Amount <= 0)
             throw new ValidationException("amount", "Kredit summasi musbat bo'lishi kerak.");
         if (dto.InterestRate is < 1 or > 100)
@@ -39,17 +39,13 @@ public class LoanService : ILoanService
         if (dto.MinContribution.HasValue && dto.MinContribution.Value > dto.Amount)
             throw new ValidationException("minContribution", "Minimal investitsiya miqdori kredit summasidan oshmasligi kerak.");
 
-        // 2. Credit check (validatsiyadan keyin)
-        await _creditScoring.EnsureEligibleAsync(borrowerProfileId, dto.Amount);
-
-        var profile = await _context.BorrowerProfiles
-            .FirstOrDefaultAsync(bp => bp.Id == borrowerProfileId)
-            ?? throw new NotFoundException("BorrowerProfile", borrowerProfileId);
+        // 2. Credit check
+        await _creditScoring.EnsureEligibleAsync(userId, dto.Amount);
 
         // 3. Loan yaratish
         var loan = new Loan
         {
-            BorrowerId         = borrowerProfileId,
+            UserId             = userId,
             Title              = dto.Title,
             Description        = dto.Description,
             Amount             = dto.Amount,
@@ -65,11 +61,11 @@ public class LoanService : ILoanService
         await _context.SaveChangesAsync();
 
         // 4. Audit log
-        await _audit.LogAsync("Loan", loan.Id, "Created", profile.UserId,
+        await _audit.LogAsync("Loan", loan.Id, "Created", userId,
             new { loan.Amount, loan.InterestRate, loan.DurationDays });
 
         // 5. Notification
-        await _notifications.SendAsync(profile.UserId, "Kredit arizasi yaratildi",
+        await _notifications.SendAsync(userId, "Kredit arizasi yaratildi",
             $"'{loan.Title}' nomli {loan.Amount:N0} UZS miqdordagi kredit arizangiz qabul qilindi.");
 
         return loan;
@@ -78,18 +74,18 @@ public class LoanService : ILoanService
     public async Task<Loan?> GetLoanByIdAsync(Guid id)
     {
         return await _context.Loans
-            .Include(l => l.Borrower)
+            .Include(l => l.User)
             .Include(l => l.Investments)
             .Include(l => l.Repayments)
             .Include(l => l.Offers)
             .FirstOrDefaultAsync(l => l.Id == id);
     }
 
-    public async Task<IEnumerable<Loan>> GetLoansByBorrowerAsync(Guid borrowerProfileId)
+    public async Task<IEnumerable<Loan>> GetLoansByUserAsync(Guid userId)
     {
         return await _context.Loans
             .AsNoTracking()
-            .Where(l => l.BorrowerId == borrowerProfileId)
+            .Where(l => l.UserId == userId)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync();
     }
@@ -103,7 +99,7 @@ public class LoanService : ILoanService
             .OrderBy(l => l.OpenUntil)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Include(l => l.Borrower)
+            .Include(l => l.User)
             .AsSplitQuery()
             .ToListAsync();
     }
@@ -116,7 +112,7 @@ public class LoanService : ILoanService
 
         ValidateStateTransition(loan.Status, newStatus);
 
-        var oldStatus = loan.Status; // capture BEFORE changing — FIX #13
+        var oldStatus = loan.Status;
         loan.Status = newStatus;
         if (newStatus == LoanStatus.Active)
             loan.StartDate = DateTimeOffset.UtcNow;
@@ -131,11 +127,10 @@ public class LoanService : ILoanService
     public async Task AcceptLoanAsync(Guid loanId, Guid borrowerUserId)
     {
         var loan = await _context.Loans
-            .Include(l => l.Borrower)
             .FirstOrDefaultAsync(l => l.Id == loanId)
             ?? throw new NotFoundException("Loan", loanId);
 
-        if (loan.Borrower?.UserId != borrowerUserId)
+        if (loan.UserId != borrowerUserId)
             throw new UnauthorizedException("Bu kredit sizga tegishli emas.");
 
         if (loan.Status != LoanStatus.Funded)
@@ -165,15 +160,8 @@ public class LoanService : ILoanService
 
     // ── Repayment Schedule Generator ─────────────────────────────────────────
 
-    /// <summary>
-    /// To'lov jadvalini hisoblaydi.
-    /// Simple interest (oddiy foiz): har bir to'lovda teng qismda bo'linadi.
-    /// Formula: InterestAmount = (Amount * Rate/100) / numInstallments
-    ///          PrincipalAmount = Amount / numInstallments
-    /// </summary>
     private async Task GenerateRepaymentScheduleAsync(Loan loan)
     {
-        // Avvalgi schedule larni o'chirish (agar qayta qabul bo'lsa)
         var existing = await _context.Repayments
             .Where(r => r.LoanId == loan.Id && r.Status == PaymentStatus.Created)
             .ToListAsync();
@@ -188,7 +176,6 @@ public class LoanService : ILoanService
         {
             var dueDate = CalculateDueDate(startDate, i, loan.RepaymentFrequency);
 
-            // Oxirgi to'lovda yaxlitlash farqini to'liq hisoblaymiz
             var actualPrincipal = (i == numInstallments)
                 ? loan.Amount - principal * (numInstallments - 1)
                 : principal;
@@ -232,10 +219,6 @@ public class LoanService : ILoanService
 
     // ── State Machine ────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Loan holat o'zgarishining to'g'riligini tekshiradi.
-    /// Faqat ruxsat etilgan o'tishlar qabul qilinadi.
-    /// </summary>
     private static void ValidateStateTransition(LoanStatus from, LoanStatus to)
     {
         var allowed = from switch

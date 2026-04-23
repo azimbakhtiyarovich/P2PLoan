@@ -47,26 +47,17 @@ public class UserService : IUserService
         _context.UserProfiles.Add(profile);
         _context.Wallets.Add(wallet);
 
-        // Rol va profil yaratish
-        var roleId = (short)dto.Role;
-        var roleExists = await _context.Roles.AnyAsync(r => r.Id == roleId);
+        // Har bir yangi foydalanuvchiga "User" roli beriladi
+        var userRoleId = (short)RoleType.User;
+        var roleExists = await _context.Roles.AnyAsync(r => r.Id == userRoleId);
         if (roleExists)
         {
             _context.UserRoles.Add(new UserRole
             {
                 UserId     = user.Id,
-                RoleId     = roleId,
+                RoleId     = userRoleId,
                 AssignedAt = DateTimeOffset.UtcNow
             });
-        }
-
-        if (dto.Role == RoleType.Borrower)
-        {
-            _context.BorrowerProfiles.Add(new BorrowerProfile { UserId = user.Id });
-        }
-        else if (dto.Role == RoleType.Lender)
-        {
-            _context.LenderProfiles.Add(new LenderProfile { UserId = user.Id });
         }
 
         await _context.SaveChangesAsync();
@@ -78,7 +69,6 @@ public class UserService : IUserService
         var user = await _context.Users
             .FirstOrDefaultAsync(u => u.Phone == phone);
 
-        // Generic xabar: xavfsizlik uchun telefon yoki parol noto'g'ri deb ko'rsatiladi
         if (user is null || !BCrypt.Net.BCrypt.Verify(rawPassword, user.PasswordHash))
             throw new UnauthorizedException("Telefon raqami yoki parol noto'g'ri.");
 
@@ -167,7 +157,7 @@ public class UserService : IUserService
 
         user.IsDeleted  = true;
         user.DeletedAt  = DateTimeOffset.UtcNow;
-        user.Phone      = $"DELETED_{userId}_{user.Phone}"; // Prevent phone reuse
+        user.Phone      = $"DELETED_{userId}_{user.Phone}";
         await _context.SaveChangesAsync();
         return true;
     }

@@ -9,7 +9,7 @@ public class InvestmentDto
 {
     public Guid Id { get; set; }
     public Guid LoanId { get; set; }
-    public Guid LenderId { get; set; }
+    public Guid UserId { get; set; }
     public decimal Amount { get; set; }
     public DateTimeOffset InvestedAt { get; set; }
 }

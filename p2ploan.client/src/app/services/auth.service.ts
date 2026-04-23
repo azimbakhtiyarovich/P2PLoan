@@ -24,9 +24,9 @@ export class AuthService {
     return !!this.currentUser$.value;
   }
 
-  register(email: string, phoneNumber: string, password: string, role: number = 0): Observable<UserSession> {
+  register(email: string, phoneNumber: string, password: string): Observable<UserSession> {
     return this.http
-      .post<UserSession>('/api/auth/register', { email, phoneNumber, password, role })
+      .post<UserSession>('/api/auth/register', { email, phoneNumber, password })
       .pipe(tap(session => this.currentUser$.next(session)));
   }
 
