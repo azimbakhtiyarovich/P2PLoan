@@ -1,21 +1,31 @@
-<div class="auth-card">
-  <h2>Tizimga kirish</h2>
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="auth-logo-icon">P2P</span>
+    </div>
+    <h2>Tizimga kirish</h2>
+    <p class="auth-subtitle">Hisobingizga kiring va boshqaring</p>
 
-  <div class="alert-error" *ngIf="error">{{ error }}</div>
+    <div class="alert-error" *ngIf="error">{{ error }}</div>
 
-  <form (ngSubmit)="submit()" #f="ngForm">
-    <label>Telefon raqam</label>
-    <input type="text" [(ngModel)]="phoneNumber" name="phoneNumber"
-           placeholder="+998901234567" required />
+    <form (ngSubmit)="submit()" #f="ngForm">
+      <div class="form-group">
+        <label>Telefon raqam</label>
+        <input type="text" [(ngModel)]="phoneNumber" name="phoneNumber"
+               placeholder="+998 90 123 45 67" required />
+      </div>
 
-    <label>Parol</label>
-    <input type="password" [(ngModel)]="password" name="password"
-           placeholder="Parol" required />
+      <div class="form-group">
+        <label>Parol</label>
+        <input type="password" [(ngModel)]="password" name="password"
+               placeholder="Parolingizni kiriting" required />
+      </div>
 
-    <button type="submit" [disabled]="loading">
-      {{ loading ? 'Yuklanmoqda...' : 'Kirish' }}
-    </button>
-  </form>
+      <button type="submit" [disabled]="loading">
+        {{ loading ? 'Yuklanmoqda...' : 'Kirish' }}
+      </button>
+    </form>
 
-  <p>Hisob yo'qmi? <a routerLink="/register">Ro'yxatdan o'tish</a></p>
+    <p>Hisob yo'qmi? <a routerLink="/register">Ro'yxatdan o'tish</a></p>
+  </div>
 </div>
