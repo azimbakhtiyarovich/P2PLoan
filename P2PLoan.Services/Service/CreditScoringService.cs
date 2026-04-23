@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using P2PLoan.Core.DTO.CreditScore;
+using P2PLoan.Core.Entities;
 using P2PLoan.Core.Enum;
 using P2PLoan.Core.Exceptions;
 using P2PLoan.DataAccess;
@@ -33,13 +34,14 @@ public class CreditScoringService : ICreditScoringService
         _context = context;
     }
 
-    public async Task<CreditScoreResultDto> CalculateAndSaveAsync(Guid borrowerProfileId)
+    public async Task<CreditScoreResultDto> CalculateAndSaveAsync(Guid userId)
     {
-        var profile = await _context.BorrowerProfiles
-            .Include(bp => bp.Loans)
-                .ThenInclude(l => l.Repayments)
-            .FirstOrDefaultAsync(bp => bp.Id == borrowerProfileId)
-            ?? throw new NotFoundException("BorrowerProfile", borrowerProfileId);
+        var profile = await _context.UserProfiles
+            .Include(up => up.User)
+                .ThenInclude(u => u!.Loans)
+                    .ThenInclude(l => l.Repayments)
+            .FirstOrDefaultAsync(up => up.UserId == userId)
+            ?? throw new NotFoundException("UserProfile", userId);
 
         var result = Compute(profile);
 
@@ -52,17 +54,17 @@ public class CreditScoringService : ICreditScoringService
         return result;
     }
 
-    public async Task<CreditScoreResultDto?> GetLatestScoreAsync(Guid borrowerProfileId)
+    public async Task<CreditScoreResultDto?> GetLatestScoreAsync(Guid userId)
     {
-        var profile = await _context.BorrowerProfiles
+        var profile = await _context.UserProfiles
             .AsNoTracking()
-            .FirstOrDefaultAsync(bp => bp.Id == borrowerProfileId);
+            .FirstOrDefaultAsync(up => up.UserId == userId);
 
         if (profile?.CreditScore is null) return null;
 
         return new CreditScoreResultDto
         {
-            BorrowerId = borrowerProfileId,
+            UserId = userId,
             Score = profile.CreditScore.Value,
             Rating = profile.CreditRating,
             IsEligible = profile.CreditScore >= MinEligibleScore,
@@ -71,12 +73,12 @@ public class CreditScoringService : ICreditScoringService
         };
     }
 
-    public async Task EnsureEligibleAsync(Guid borrowerProfileId, decimal loanAmount)
+    public async Task EnsureEligibleAsync(Guid userId, decimal loanAmount)
     {
-        var profile = await _context.BorrowerProfiles
+        var profile = await _context.UserProfiles
             .AsNoTracking()
-            .FirstOrDefaultAsync(bp => bp.Id == borrowerProfileId)
-            ?? throw new NotFoundException("BorrowerProfile", borrowerProfileId);
+            .FirstOrDefaultAsync(up => up.UserId == userId)
+            ?? throw new NotFoundException("UserProfile", userId);
 
         // Agar ball eskirgan yoki yo'q bo'lsa — yangilash
         var needsRecalc = profile.CreditScore is null
@@ -84,8 +86,7 @@ public class CreditScoringService : ICreditScoringService
 
         if (needsRecalc)
         {
-            var result = await CalculateAndSaveAsync(borrowerProfileId);
-            // result dan to'g'ridan-to'g'ri foydalanamiz — re-fetch kerak emas
+            var result = await CalculateAndSaveAsync(userId);
             var score2    = result.Score;
             var required2 = GetRequiredScore(loanAmount);
             if (score2 < required2)
@@ -111,12 +112,14 @@ public class CreditScoringService : ICreditScoringService
     //  HISOBLASH LOGIKASI
     // ─────────────────────────────────────────────────────────────────────────
 
-    private CreditScoreResultDto Compute(Core.Entities.BorrowerProfile profile)
+    private CreditScoreResultDto Compute(UserProfile profile)
     {
-        var kyc    = ComputeKycFactor(profile.KycStatus);          // 0-100
-        var income = ComputeIncomeFactor(profile.MonthlyIncome);   // 0-100
-        var dti    = ComputeDtiFactor(profile.MonthlyIncome, profile.ExistingDebt); // 0-100
-        var hist   = ComputeHistoryFactor(profile.Loans);          // 0-100
+        var loans = profile.User?.Loans ?? new List<Loan>();
+
+        var kyc    = ComputeKycFactor(profile.KycStatus);
+        var income = ComputeIncomeFactor(profile.MonthlyIncome);
+        var dti    = ComputeDtiFactor(profile.MonthlyIncome, profile.ExistingDebt);
+        var hist   = ComputeHistoryFactor(loans);
 
         // Weighted sum (0-100)
         var weighted = kyc * 0.15m + income * 0.30m + dti * 0.25m + hist * 0.30m;
@@ -127,7 +130,7 @@ public class CreditScoringService : ICreditScoringService
 
         return new CreditScoreResultDto
         {
-            BorrowerId           = profile.Id,
+            UserId               = profile.UserId,
             Score                = score,
             Rating               = ScoreToRating(score),
             IsEligible           = score >= MinEligibleScore,
@@ -140,21 +143,14 @@ public class CreditScoringService : ICreditScoringService
         };
     }
 
-    /// <summary>
-    /// KYC holati bo'yicha 0-100 ball.
-    /// Verified=100, Pending=40, Rejected/NotSubmitted=0
-    /// </summary>
     private static decimal ComputeKycFactor(KycStatus status) => status switch
     {
         KycStatus.Verified     => 100m,
         KycStatus.Pending      => 40m,
         KycStatus.Rejected     => 0m,
-        _                      => 0m    // NotSubmitted
+        _                      => 0m
     };
 
-    /// <summary>
-    /// Oylik daromad (UZS) bo'yicha 0-100 ball.
-    /// </summary>
     private static decimal ComputeIncomeFactor(decimal monthlyIncome) => monthlyIncome switch
     {
         >= 10_000_000m => 100m,
@@ -165,10 +161,6 @@ public class CreditScoringService : ICreditScoringService
         _              => 0m
     };
 
-    /// <summary>
-    /// Debt-to-Income (yillik) nisbati bo'yicha 0-100 ball.
-    /// DTI = ExistingDebt / (MonthlyIncome * 12)
-    /// </summary>
     private static decimal ComputeDtiFactor(decimal monthlyIncome, decimal? existingDebt)
     {
         if (monthlyIncome <= 0) return 0m;
@@ -187,25 +179,19 @@ public class CreditScoringService : ICreditScoringService
         };
     }
 
-    /// <summary>
-    /// O'tmishdagi to'lov tarixi bo'yicha 0-100 ball.
-    /// Yangi borrower (tarixi yo'q): neytral 60 ball.
-    /// Har bir muddatida to'langan to'lov +, kechikkan -.
-    /// </summary>
-    private static decimal ComputeHistoryFactor(ICollection<Core.Entities.Loan> loans)
+    private static decimal ComputeHistoryFactor(ICollection<Loan> loans)
     {
         var allRepayments = loans
             .SelectMany(l => l.Repayments)
             .Where(r => r.Status == PaymentStatus.Success)
             .ToList();
 
-        if (!allRepayments.Any()) return 60m; // Yangi borrower — neytral
+        if (!allRepayments.Any()) return 60m;
 
         var total  = allRepayments.Count;
         var onTime = allRepayments.Count(r => r.PaidAt.HasValue && r.PaidAt.Value.Date <= r.DueDate);
         var ratio  = (decimal)onTime / total;
 
-        // ratio [0..1] → [0..100], minimum 5 ta to'lov bo'lganda ishonchli
         var reliability = total >= 5 ? 1.0m : (decimal)total / 5;
         return ratio * 100m * (0.7m + 0.3m * reliability);
     }

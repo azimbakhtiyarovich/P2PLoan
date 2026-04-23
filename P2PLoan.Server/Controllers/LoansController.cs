@@ -13,16 +13,14 @@ namespace P2PLoan.Server.Controllers;
 [Authorize]
 public class LoansController : ControllerBase
 {
-    private readonly ILoanService    _loanService;
-    private readonly IProfileService _profileService;
+    private readonly ILoanService _loanService;
 
-    public LoansController(ILoanService loanService, IProfileService profileService)
+    public LoansController(ILoanService loanService)
     {
-        _loanService    = loanService;
-        _profileService = profileService;
+        _loanService = loanService;
     }
 
-    /// <summary>Barcha ochiq loanlar (lender uchun).</summary>
+    /// <summary>Barcha ochiq loanlar.</summary>
     [HttpGet]
     public async Task<IActionResult> GetOpenLoans(
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
@@ -71,16 +69,12 @@ public class LoansController : ControllerBase
         });
     }
 
-    /// <summary>Mening loanlarim (borrower).</summary>
+    /// <summary>Mening loanlarim.</summary>
     [HttpGet("my")]
     public async Task<IActionResult> GetMyLoans()
     {
-        var userId    = GetCurrentUserId();
-        var profileId = await _profileService.GetBorrowerProfileIdAsync(userId);
-
-        if (profileId is null) return Ok(Array.Empty<object>());
-
-        var loans = await _loanService.GetLoansByBorrowerAsync(profileId.Value);
+        var userId = GetCurrentUserId();
+        var loans  = await _loanService.GetLoansByUserAsync(userId);
         return Ok(loans.Select(l => new LoanSummaryDto
         {
             Id           = l.Id,
@@ -93,22 +87,19 @@ public class LoansController : ControllerBase
         }));
     }
 
-    /// <summary>Yangi loan yaratish (faqat Borrower).</summary>
+    /// <summary>Yangi loan yaratish.</summary>
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateLoanDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        var userId    = GetCurrentUserId();
-        var profileId = await _profileService.GetBorrowerProfileIdAsync(userId)
-            ?? throw new NotFoundException("BorrowerProfile topilmadi. Avval profil to'ldiring.");
-
-        var loan = await _loanService.CreateLoanAsync(dto, profileId);
+        var userId = GetCurrentUserId();
+        var loan   = await _loanService.CreateLoanAsync(dto, userId);
         return CreatedAtAction(nameof(GetById), new { id = loan.Id },
             new { loan.Id, loan.Status, loan.Amount });
     }
 
-    /// <summary>Borrower kreditni qabul qiladi (Funded → Active).</summary>
+    /// <summary>Kreditni qabul qilish (Funded → Active).</summary>
     [HttpPost("{id:guid}/accept")]
     public async Task<IActionResult> Accept(Guid id)
     {

@@ -1,12 +1,7 @@
-﻿using P2PLoan.Core.Enum;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace P2PLoan.Core.Entities;
+
 public class User
 {
     [Key] public Guid Id { get; set; } = Guid.NewGuid();
@@ -25,5 +20,6 @@ public class User
     public ICollection<KycDocument> KycDocuments { get; set; } = new List<KycDocument>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+    public ICollection<Loan> Loans { get; set; } = new List<Loan>();
+    public ICollection<Investment> Investments { get; set; } = new List<Investment>();
 }
-

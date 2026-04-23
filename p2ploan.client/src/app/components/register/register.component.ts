@@ -11,7 +11,6 @@ export class RegisterComponent {
   email = '';
   phone = '';
   password = '';
-  role = 0;
   error = '';
   loading = false;
 
@@ -28,7 +27,7 @@ export class RegisterComponent {
     }
     this.loading = true;
     this.error = '';
-    this.auth.register(this.email, this.phone, this.password, this.role).subscribe({
+    this.auth.register(this.email, this.phone, this.password).subscribe({
       next: () => this.router.navigate(['/']),
       error: err => {
         this.error = err?.error?.message ?? err?.error ?? 'Ro\'yxatdan o\'tish muvaffaqiyatsiz.';

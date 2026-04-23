@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using P2PLoan.Core.DTO.Profile;
 using P2PLoan.Core.Entities;
+using P2PLoan.Core.Exceptions;
 using P2PLoan.DataAccess;
 using P2PLoan.Services.Interface;
 
@@ -15,88 +16,53 @@ public class ProfileService : IProfileService
         _context = context;
     }
 
-    public async Task<BorrowerProfileDto?> GetBorrowerProfileAsync(Guid userId)
+    public async Task<UserProfileDto?> GetProfileAsync(Guid userId)
     {
-        var profile = await _context.BorrowerProfiles
+        var profile = await _context.UserProfiles
             .AsNoTracking()
-            .FirstOrDefaultAsync(bp => bp.UserId == userId);
+            .Include(up => up.User)
+            .FirstOrDefaultAsync(up => up.UserId == userId);
 
         if (profile is null) return null;
 
-        return new BorrowerProfileDto
-        {
-            UserId         = userId,
-            PassportNumber = profile.PassportNumber,
-            BirthDate      = profile.BirthDate,
-            MonthlyIncome  = profile.MonthlyIncome,
-            ExistingDebt   = profile.ExistingDebt,
-            KycStatus      = profile.KycStatus,
-            CreditScore    = profile.CreditScore,
-            CreditRating   = profile.CreditRating,
-            LastScoredAt   = profile.LastScoredAt
-        };
-    }
-
-    public async Task UpsertBorrowerProfileAsync(Guid userId, UpdateBorrowerProfileDto dto)
-    {
-        var profile = await _context.BorrowerProfiles
-            .FirstOrDefaultAsync(bp => bp.UserId == userId);
-
-        if (profile is null)
-        {
-            profile = new BorrowerProfile { UserId = userId };
-            _context.BorrowerProfiles.Add(profile);
-        }
-
-        // KycStatus admin tomonidan boshqariladi, foydalanuvchi o'zgartira olmaydi
-        profile.PassportNumber     = dto.PassportNumber;
-        profile.PassportIssuedDate = dto.PassportIssuedDate;
-        profile.BirthDate          = dto.BirthDate;
-        profile.MonthlyIncome      = dto.MonthlyIncome;
-        profile.ExistingDebt       = dto.ExistingDebt;
-
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task<Guid?> GetBorrowerProfileIdAsync(Guid userId)
-    {
-        var id = await _context.BorrowerProfiles
-            .AsNoTracking()
-            .Where(bp => bp.UserId == userId)
-            .Select(bp => (Guid?)bp.Id)
-            .FirstOrDefaultAsync();
-        return id;
-    }
-
-    public async Task<LenderProfileDto?> GetLenderProfileAsync(Guid userId)
-    {
-        var profile = await _context.LenderProfiles
-            .AsNoTracking()
-            .FirstOrDefaultAsync(lp => lp.UserId == userId);
-
-        if (profile is null) return null;
-
-        return new LenderProfileDto
+        return new UserProfileDto
         {
             UserId             = userId,
+            FullName           = profile.FullName,
+            Email              = profile.Email,
+            Address            = profile.Address,
+            Country            = profile.Country,
+            PassportNumber     = profile.PassportNumber,
+            BirthDate          = profile.BirthDate,
+            KycStatus          = profile.KycStatus,
+            MonthlyIncome      = profile.MonthlyIncome,
+            ExistingDebt       = profile.ExistingDebt,
+            CreditScore        = profile.CreditScore,
+            CreditRating       = profile.CreditRating,
+            LastScoredAt       = profile.LastScoredAt,
             PreferredMinAmount = profile.PreferredMinAmount,
             PreferredMaxAmount = profile.PreferredMaxAmount
         };
     }
 
-    public async Task UpsertLenderProfileAsync(Guid userId, LenderProfileDto dto)
+    public async Task UpdateProfileAsync(Guid userId, UpdateProfileDto dto)
     {
-        var profile = await _context.LenderProfiles
-            .FirstOrDefaultAsync(lp => lp.UserId == userId);
+        var profile = await _context.UserProfiles
+            .FirstOrDefaultAsync(up => up.UserId == userId)
+            ?? throw new NotFoundException("UserProfile", userId);
 
-        if (profile is null)
-        {
-            profile = new LenderProfile { UserId = userId };
-            _context.LenderProfiles.Add(profile);
-        }
+        if (dto.FullName is not null)       profile.FullName           = dto.FullName;
+        if (dto.Address is not null)        profile.Address            = dto.Address;
+        if (dto.Country is not null)        profile.Country            = dto.Country;
+        if (dto.PassportNumber is not null) profile.PassportNumber     = dto.PassportNumber;
+        if (dto.PassportIssuedDate.HasValue) profile.PassportIssuedDate = dto.PassportIssuedDate;
+        if (dto.BirthDate.HasValue)         profile.BirthDate          = dto.BirthDate;
 
-        profile.PreferredMinAmount = dto.PreferredMinAmount;
-        profile.PreferredMaxAmount = dto.PreferredMaxAmount;
+        profile.MonthlyIncome = dto.MonthlyIncome;
+        if (dto.ExistingDebt.HasValue)      profile.ExistingDebt       = dto.ExistingDebt;
+
+        if (dto.PreferredMinAmount.HasValue) profile.PreferredMinAmount = dto.PreferredMinAmount;
+        if (dto.PreferredMaxAmount.HasValue) profile.PreferredMaxAmount = dto.PreferredMaxAmount;
 
         await _context.SaveChangesAsync();
     }

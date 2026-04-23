@@ -24,7 +24,7 @@ public class InvestmentsController : ControllerBase
     public async Task<IActionResult> GetMine()
     {
         var userId = GetCurrentUserId();
-        var result = await _investmentService.GetByLenderAsync(userId);
+        var result = await _investmentService.GetByUserAsync(userId);
         return Ok(result);
     }
 

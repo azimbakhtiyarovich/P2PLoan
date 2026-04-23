@@ -27,14 +27,6 @@
                placeholder="Kamida 8 ta belgi" required />
       </div>
 
-      <div class="form-group">
-        <label>Rol tanlang</label>
-        <select [(ngModel)]="role" name="role">
-          <option [ngValue]="0">Qarz oluvchi (Borrower)</option>
-          <option [ngValue]="1">Investor (Lender)</option>
-        </select>
-      </div>
-
       <button type="submit" [disabled]="loading">
         {{ loading ? 'Yuklanmoqda...' : 'Ro\'yxatdan o\'tish' }}
       </button>

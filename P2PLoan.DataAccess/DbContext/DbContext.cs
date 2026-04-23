@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using P2PLoan.Core.Entities;
-using P2PLoan.Core.Enum;
 
 namespace P2PLoan.DataAccess;
 
@@ -14,10 +13,6 @@ public class ApplicationDbContext : DbContext
     public DbSet<Role> Roles { get; set; }
     public DbSet<UserRole> UserRoles { get; set; }
     public DbSet<UserProfile> UserProfiles { get; set; }
-
-    // === Profiles ===
-    public DbSet<BorrowerProfile> BorrowerProfiles { get; set; }
-    public DbSet<LenderProfile> LenderProfiles { get; set; }
 
     // === KYC ===
     public DbSet<KycDocument> KycDocuments { get; set; }
@@ -64,28 +59,6 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(ur => ur.RoleId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // ── BorrowerProfile ────────────────────────────────────────────────
-        modelBuilder.Entity<BorrowerProfile>()
-            .HasOne(bp => bp.User)
-            .WithOne()
-            .HasForeignKey<BorrowerProfile>(bp => bp.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder.Entity<BorrowerProfile>()
-            .HasIndex(bp => bp.UserId)
-            .IsUnique();
-
-        // ── LenderProfile ──────────────────────────────────────────────────
-        modelBuilder.Entity<LenderProfile>()
-            .HasOne(lp => lp.User)
-            .WithOne()
-            .HasForeignKey<LenderProfile>(lp => lp.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder.Entity<LenderProfile>()
-            .HasIndex(lp => lp.UserId)
-            .IsUnique();
-
         // ── UserProfile ────────────────────────────────────────────────────
         modelBuilder.Entity<UserProfile>()
             .HasOne(up => up.User)
@@ -100,18 +73,18 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(k => k.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // ── Loan ───────────────────────────────────────────────────────────
+        // ── Loan → User ────────────────────────────────────────────────────
         modelBuilder.Entity<Loan>()
-            .HasOne(l => l.Borrower)
-            .WithMany(bp => bp.Loans)
-            .HasForeignKey(l => l.BorrowerId)
+            .HasOne(l => l.User)
+            .WithMany(u => u.Loans)
+            .HasForeignKey(l => l.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Loan>()
             .HasIndex(l => l.Status);
 
         modelBuilder.Entity<Loan>()
-            .HasIndex(l => l.BorrowerId);
+            .HasIndex(l => l.UserId);
 
         // ── LoanOffer ──────────────────────────────────────────────────────
         modelBuilder.Entity<LoanOffer>()
@@ -119,6 +92,12 @@ public class ApplicationDbContext : DbContext
             .WithMany(l => l.Offers)
             .HasForeignKey(o => o.LoanId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<LoanOffer>()
+            .HasOne(o => o.User)
+            .WithMany()
+            .HasForeignKey(o => o.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         // ── Repayment ──────────────────────────────────────────────────────
         modelBuilder.Entity<Repayment>()
@@ -130,7 +109,7 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Repayment>()
             .HasIndex(r => new { r.LoanId, r.DueDate });
 
-        // ── Investment ─────────────────────────────────────────────────────
+        // ── Investment → User ──────────────────────────────────────────────
         modelBuilder.Entity<Investment>()
             .HasOne(i => i.Loan)
             .WithMany(l => l.Investments)
@@ -138,13 +117,13 @@ public class ApplicationDbContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Investment>()
-            .HasOne(i => i.Lender)
-            .WithMany(lp => lp.Investments)
-            .HasForeignKey(i => i.LenderId)
+            .HasOne(i => i.User)
+            .WithMany(u => u.Investments)
+            .HasForeignKey(i => i.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Investment>()
-            .HasIndex(i => i.LenderId);
+            .HasIndex(i => i.UserId);
 
         // ── Wallet ─────────────────────────────────────────────────────────
         modelBuilder.Entity<Wallet>()
@@ -157,7 +136,6 @@ public class ApplicationDbContext : DbContext
             .HasIndex(w => w.UserId)
             .IsUnique();
 
-        // Optimistic concurrency
         modelBuilder.Entity<Wallet>()
             .Property(w => w.RowVersion)
             .IsRowVersion();
@@ -182,7 +160,7 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Payment>()
             .HasIndex(p => p.ExternalId)
             .IsUnique()
-            .HasFilter("[ExternalId] IS NOT NULL"); // NULL dagi duplicate ruxsat
+            .HasFilter("[ExternalId] IS NOT NULL");
 
         // ── Notification ───────────────────────────────────────────────────
         modelBuilder.Entity<Notification>()
@@ -207,9 +185,8 @@ public class ApplicationDbContext : DbContext
 
         // ── Role seeding ───────────────────────────────────────────────────
         modelBuilder.Entity<Role>().HasData(
-            new Role { Id = 0, Name = "Borrower" },
-            new Role { Id = 1, Name = "Lender"   },
-            new Role { Id = 2, Name = "Admin"     }
+            new Role { Id = 0, Name = "User"  },
+            new Role { Id = 1, Name = "Admin" }
         );
     }
 }

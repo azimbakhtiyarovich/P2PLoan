@@ -61,51 +61,6 @@ namespace P2PLoan.DataAccess.Migrations
                     b.ToTable("AuditLogs");
                 });
 
-            modelBuilder.Entity("P2PLoan.Core.Entities.BorrowerProfile", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("BirthDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<short>("CreditRating")
-                        .HasColumnType("smallint");
-
-                    b.Property<int?>("CreditScore")
-                        .HasColumnType("int");
-
-                    b.Property<decimal?>("ExistingDebt")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<short>("KycStatus")
-                        .HasColumnType("smallint");
-
-                    b.Property<DateTimeOffset?>("LastScoredAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<decimal>("MonthlyIncome")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("PassportIssuedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PassportNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("BorrowerProfiles");
-                });
-
             modelBuilder.Entity("P2PLoan.Core.Entities.Investment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -118,20 +73,20 @@ namespace P2PLoan.DataAccess.Migrations
                     b.Property<DateTimeOffset>("InvestedAt")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<Guid>("LenderId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<Guid>("LoanId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("PaymentId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("LenderId");
-
                     b.HasIndex("LoanId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Investments");
                 });
@@ -171,29 +126,6 @@ namespace P2PLoan.DataAccess.Migrations
                     b.ToTable("KycDocuments");
                 });
 
-            modelBuilder.Entity("P2PLoan.Core.Entities.LenderProfile", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal?>("PreferredMaxAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("PreferredMinAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("LenderProfiles");
-                });
-
             modelBuilder.Entity("P2PLoan.Core.Entities.Loan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -205,9 +137,6 @@ namespace P2PLoan.DataAccess.Migrations
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<Guid>("BorrowerId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
@@ -249,11 +178,14 @@ namespace P2PLoan.DataAccess.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("BorrowerId");
-
                     b.HasIndex("Status");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Loans");
                 });
@@ -267,9 +199,6 @@ namespace P2PLoan.DataAccess.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<Guid?>("LenderId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<Guid>("LoanId")
                         .HasColumnType("uniqueidentifier");
 
@@ -282,11 +211,14 @@ namespace P2PLoan.DataAccess.Migrations
                     b.Property<short>("Status")
                         .HasColumnType("smallint");
 
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("LenderId");
-
                     b.HasIndex("LoanId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("LoanOffers");
                 });
@@ -421,16 +353,11 @@ namespace P2PLoan.DataAccess.Migrations
                         new
                         {
                             Id = (short)0,
-                            Name = "Borrower"
+                            Name = "User"
                         },
                         new
                         {
                             Id = (short)1,
-                            Name = "Lender"
-                        },
-                        new
-                        {
-                            Id = (short)2,
                             Name = "Admin"
                         });
                 });
@@ -512,17 +439,51 @@ namespace P2PLoan.DataAccess.Migrations
                     b.Property<string>("Address")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("BirthDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Country")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<short>("CreditRating")
+                        .HasColumnType("smallint");
+
+                    b.Property<int?>("CreditScore")
+                        .HasColumnType("int");
 
                     b.Property<string>("Email")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<decimal?>("ExistingDebt")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("FullName")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<short>("KycStatus")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateTimeOffset?>("LastScoredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<decimal>("MonthlyIncome")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("PassportIssuedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PassportNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal?>("PreferredMaxAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("PreferredMinAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
@@ -587,34 +548,23 @@ namespace P2PLoan.DataAccess.Migrations
                     b.ToTable("Wallets");
                 });
 
-            modelBuilder.Entity("P2PLoan.Core.Entities.BorrowerProfile", b =>
-                {
-                    b.HasOne("P2PLoan.Core.Entities.User", "User")
-                        .WithOne()
-                        .HasForeignKey("P2PLoan.Core.Entities.BorrowerProfile", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("P2PLoan.Core.Entities.Investment", b =>
                 {
-                    b.HasOne("P2PLoan.Core.Entities.LenderProfile", "Lender")
-                        .WithMany("Investments")
-                        .HasForeignKey("LenderId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("P2PLoan.Core.Entities.Loan", "Loan")
                         .WithMany("Investments")
                         .HasForeignKey("LoanId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Lender");
+                    b.HasOne("P2PLoan.Core.Entities.User", "User")
+                        .WithMany("Investments")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Loan");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("P2PLoan.Core.Entities.KycDocument", b =>
@@ -628,43 +578,33 @@ namespace P2PLoan.DataAccess.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("P2PLoan.Core.Entities.LenderProfile", b =>
+            modelBuilder.Entity("P2PLoan.Core.Entities.Loan", b =>
                 {
                     b.HasOne("P2PLoan.Core.Entities.User", "User")
-                        .WithOne()
-                        .HasForeignKey("P2PLoan.Core.Entities.LenderProfile", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .WithMany("Loans")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("P2PLoan.Core.Entities.Loan", b =>
-                {
-                    b.HasOne("P2PLoan.Core.Entities.BorrowerProfile", "Borrower")
-                        .WithMany("Loans")
-                        .HasForeignKey("BorrowerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Borrower");
-                });
-
             modelBuilder.Entity("P2PLoan.Core.Entities.LoanOffer", b =>
                 {
-                    b.HasOne("P2PLoan.Core.Entities.LenderProfile", "Lender")
-                        .WithMany()
-                        .HasForeignKey("LenderId");
-
                     b.HasOne("P2PLoan.Core.Entities.Loan", "Loan")
                         .WithMany("Offers")
                         .HasForeignKey("LoanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Lender");
+                    b.HasOne("P2PLoan.Core.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Loan");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("P2PLoan.Core.Entities.Notification", b =>
@@ -751,16 +691,6 @@ namespace P2PLoan.DataAccess.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("P2PLoan.Core.Entities.BorrowerProfile", b =>
-                {
-                    b.Navigation("Loans");
-                });
-
-            modelBuilder.Entity("P2PLoan.Core.Entities.LenderProfile", b =>
-                {
-                    b.Navigation("Investments");
-                });
-
             modelBuilder.Entity("P2PLoan.Core.Entities.Loan", b =>
                 {
                     b.Navigation("Investments");
@@ -777,7 +707,11 @@ namespace P2PLoan.DataAccess.Migrations
 
             modelBuilder.Entity("P2PLoan.Core.Entities.User", b =>
                 {
+                    b.Navigation("Investments");
+
                     b.Navigation("KycDocuments");
+
+                    b.Navigation("Loans");
 
                     b.Navigation("Notifications");
 

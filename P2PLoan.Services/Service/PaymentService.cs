@@ -57,7 +57,6 @@ public class PaymentService : IPaymentService
                                    && p.Provider == callback.Provider)
             ?? throw new NotFoundException($"Payment ExternalId={callback.ExternalId} topilmadi");
 
-        // Idempotency: ikki marta qayta ishlash xavfsiz
         if (payment.Status == PaymentStatus.Success) return;
 
         await using var tx = await _context.Database.BeginTransactionAsync();
@@ -81,7 +80,6 @@ public class PaymentService : IPaymentService
 
             await tx.CommitAsync();
 
-            // Audit va notification tranzaksiyadan tashqarida
             await _audit.LogAsync("Payment", payment.Id, "CallbackProcessed", payment.UserId,
                 new { From = prevStatus, To = callback.Status });
 
@@ -103,11 +101,10 @@ public class PaymentService : IPaymentService
     {
         var repayment = await _context.Repayments
             .Include(r => r.Loan)
-                .ThenInclude(l => l!.Borrower)
             .FirstOrDefaultAsync(r => r.Id == repaymentId)
             ?? throw new NotFoundException("Repayment", repaymentId);
 
-        if (repayment.Loan?.Borrower?.UserId != borrowerUserId)
+        if (repayment.Loan?.UserId != borrowerUserId)
             throw new UnauthorizedException("Bu to'lov sizga tegishli emas.");
 
         if (repayment.Status == PaymentStatus.Success)
@@ -132,15 +129,14 @@ public class PaymentService : IPaymentService
             repayment.Status     = PaymentStatus.Success;
             await _context.SaveChangesAsync();
 
-            // 3. Lenderlarga foyda taqsimlash (BITTA transaksiyada)
-            await DistributeProfitToLendersAsync(repayment);
+            // 3. Investorlarga foyda taqsimlash
+            await DistributeProfitToInvestorsAsync(repayment);
 
             // 4. Loan tugadimi tekshirish
             await CheckAndFinalizeLoanAsync(repayment.LoanId);
 
             await tx.CommitAsync();
 
-            // Notification va audit (izolyatsiyalangan)
             await _notifications.SendAsync(borrowerUserId, "To'lov amalga oshirildi",
                 $"{due:N0} UZS muvaffaqiyatli to'landi.");
 
@@ -165,11 +161,10 @@ public class PaymentService : IPaymentService
 
     // ── Private Helpers ───────────────────────────────────────────────────────
 
-    private async Task DistributeProfitToLendersAsync(Repayment repayment)
+    private async Task DistributeProfitToInvestorsAsync(Repayment repayment)
     {
         var loan = repayment.Loan!;
         var investments = await _context.Investments
-            .Include(i => i.Lender)
             .Where(i => i.LoanId == loan.Id)
             .ToListAsync();
 
@@ -177,22 +172,19 @@ public class PaymentService : IPaymentService
 
         foreach (var inv in investments)
         {
-            if (inv.Lender?.UserId is null) continue;
-
             var share          = inv.Amount / loan.FundedAmount;
             var principalShare = Math.Round(repayment.PrincipalAmount * share, 2);
             var interestShare  = Math.Round(repayment.InterestAmount * share, 2);
             var total          = principalShare + interestShare;
 
-            // TransactionType.ProfitCredit — to'g'ri tur (avval Deposit edi — FIX #11)
             await _wallet.DepositAsync(
-                inv.Lender.UserId,
+                inv.UserId,
                 total,
                 TransactionType.ProfitCredit,
                 repayment.Id,
                 $"Loan #{loan.Id}: asosiy={principalShare:N2}, foiz={interestShare:N2}");
 
-            await _notifications.SendAsync(inv.Lender.UserId, "Daromad keldi",
+            await _notifications.SendAsync(inv.UserId, "Daromad keldi",
                 $"{total:N0} UZS hisobingizga kiritildi (kredit to'lovi).");
         }
     }

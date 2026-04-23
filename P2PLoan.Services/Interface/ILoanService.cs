@@ -7,19 +7,19 @@ namespace P2PLoan.Services.Interface;
 public interface ILoanService
 {
     /// <summary>Kredit tekshiruv bilan yangi loan yaratadi va Repayment schedule generatsiya qiladi.</summary>
-    Task<Loan> CreateLoanAsync(CreateLoanDto dto, Guid borrowerProfileId);
+    Task<Loan> CreateLoanAsync(CreateLoanDto dto, Guid userId);
 
     Task<Loan?> GetLoanByIdAsync(Guid id);
 
-    Task<IEnumerable<Loan>> GetLoansByBorrowerAsync(Guid borrowerProfileId);
+    Task<IEnumerable<Loan>> GetLoansByUserAsync(Guid userId);
 
-    /// <summary>Barcha ochiq loanlarni qaytaradi (lender uchun).</summary>
+    /// <summary>Barcha ochiq loanlarni qaytaradi.</summary>
     Task<IEnumerable<Loan>> GetOpenLoansAsync(int page = 1, int pageSize = 20);
 
     /// <summary>Loan statusini state-machine qoidalariga rioya qilib yangilaydi.</summary>
     Task<bool> UpdateLoanStatusAsync(Guid loanId, LoanStatus newStatus, Guid? performedBy = null);
 
-    /// <summary>Borrower loanini qabul qiladi (AcceptedByBorrower → Active).</summary>
+    /// <summary>Borrower loanini qabul qiladi (Funded → Active).</summary>
     Task AcceptLoanAsync(Guid loanId, Guid borrowerUserId);
 
     /// <summary>Loan uchun repayment schedule ni qaytaradi.</summary>

@@ -4,7 +4,7 @@ namespace P2PLoan.Core.DTO.CreditScore;
 
 public class CreditScoreResultDto
 {
-    public Guid BorrowerId { get; set; }
+    public Guid UserId { get; set; }
 
     /// <summary>Kredit ball: 300-850</summary>
     public int Score { get; set; }
