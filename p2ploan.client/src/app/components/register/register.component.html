@@ -1,20 +1,29 @@
-<div class="auth-card">
-  <h2>Ro'yxatdan o'tish</h2>
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="auth-logo-icon">P2P</span>
+    </div>
+    <h2>Ro'yxatdan o'tish</h2>
+    <p class="auth-subtitle">Yangi hisob yarating va boshlang</p>
 
-  <div class="alert-error" *ngIf="error">{{ error }}</div>
+    <div class="alert-error" *ngIf="error">{{ error }}</div>
 
-  <form (ngSubmit)="submit()" #f="ngForm">
-    <label>Email</label>
-    <input type="email" [(ngModel)]="email" name="email"
-           placeholder="email@example.com" required />
+    <form (ngSubmit)="submit()" #f="ngForm">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" [(ngModel)]="email" name="email"
+               placeholder="email@example.com" required />
+      </div>
 
     <label>Telefon raqam</label>
     <input type="text" [(ngModel)]="phone" name="phone"
            placeholder="+998901234567" required />
 
-    <label>Parol</label>
-    <input type="password" [(ngModel)]="password" name="password"
-           placeholder="Kamida 8 belgi" required />
+      <div class="form-group">
+        <label>Parol</label>
+        <input type="password" [(ngModel)]="password" name="password"
+               placeholder="Kamida 8 ta belgi" required />
+      </div>
 
     <label>Rol tanlang</label>
     <select [(ngModel)]="role" name="role">
@@ -27,5 +36,6 @@
     </button>
   </form>
 
-  <p>Hisobingiz bormi? <a routerLink="/login">Kirish</a></p>
+    <p>Hisobingiz bormi? <a routerLink="/login">Kirish</a></p>
+  </div>
 </div>

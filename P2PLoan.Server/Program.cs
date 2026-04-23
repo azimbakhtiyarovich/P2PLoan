@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using P2PLoan.DataAccess;
 using P2PLoan.Server.DependencyInjection;

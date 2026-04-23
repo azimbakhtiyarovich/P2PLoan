@@ -1,38 +1,50 @@
 <div class="page">
-  <h2>Ochiq loanlar</h2>
+  <div class="page-header">
+    <h2>Ochiq loanlar</h2>
+    <a routerLink="/create-loan" class="btn-sm">+ Yangi loan</a>
+  </div>
 
   <div class="alert-error" *ngIf="error">{{ error }}</div>
-  <div *ngIf="loading">Yuklanmoqda...</div>
 
-  <table *ngIf="!loading && loans.length">
-    <thead>
-      <tr>
-        <th>Nomi</th>
-        <th>Summa (UZS)</th>
-        <th>Moliyalashtirish</th>
-        <th>Muddati</th>
-        <th>Yillik foiz</th>
-        <th>Holat</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let loan of loans">
-        <td>{{ loan.title || '—' }}</td>
-        <td>{{ loan.amount | number:'1.0-0' }}</td>
-        <td>
-          <div class="progress-bar">
-            <div class="progress-fill" [style.width.%]="fundingPercent(loan)"></div>
-          </div>
-          <small>{{ loan.fundedAmount | number:'1.0-0' }} / {{ loan.amount | number:'1.0-0' }} ({{ fundingPercent(loan) }}%)</small>
-        </td>
-        <td>{{ loan.durationDays }} kun</td>
-        <td>{{ loan.interestRate }}%</td>
-        <td><span class="badge">{{ loanStatusLabel(loan.status) }}</span></td>
-        <td><a [routerLink]="['/loans', loan.id]" class="btn-sm">Investitsiya</a></td>
-      </tr>
-    </tbody>
-  </table>
+  <div class="loading" *ngIf="loading">
+    <div class="spinner"></div>
+    Yuklanmoqda...
+  </div>
 
-  <p *ngIf="!loading && !loans.length">Hozircha ochiq loan mavjud emas.</p>
+  <div class="table-container" *ngIf="!loading && loans.length">
+    <table>
+      <thead>
+        <tr>
+          <th>Nomi</th>
+          <th>Summa (UZS)</th>
+          <th>Moliyalashtirish</th>
+          <th>Muddati</th>
+          <th>Yillik foiz</th>
+          <th>Holat</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let loan of loans">
+          <td><strong>{{ loan.title || '—' }}</strong></td>
+          <td class="font-mono">{{ loan.amount | number:'1.0-0' }}</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="fundingPercent(loan)"></div>
+            </div>
+            <small>{{ loan.fundedAmount | number:'1.0-0' }} / {{ loan.amount | number:'1.0-0' }} ({{ fundingPercent(loan) }}%)</small>
+          </td>
+          <td>{{ loan.durationDays }} kun</td>
+          <td><strong>{{ loan.interestRate }}%</strong></td>
+          <td><span class="badge">{{ loanStatusLabel(loan.status) }}</span></td>
+          <td><a [routerLink]="['/loans', loan.id]" class="btn-sm">Investitsiya</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty-state" *ngIf="!loading && !loans.length">
+    <div class="empty-state-icon">&#128200;</div>
+    <p>Hozircha ochiq loan mavjud emas.</p>
+  </div>
 </div>

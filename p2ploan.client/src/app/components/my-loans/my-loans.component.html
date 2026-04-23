@@ -7,47 +7,54 @@
   <div class="alert-success" *ngIf="actionMsg">{{ actionMsg }}</div>
   <div class="alert-error" *ngIf="actionError">{{ actionError }}</div>
   <div class="alert-error" *ngIf="error">{{ error }}</div>
-  <div *ngIf="loading">Yuklanmoqda...</div>
 
-  <table *ngIf="!loading && loans.length">
-    <thead>
-      <tr>
-        <th>Nomi</th>
-        <th>Summa</th>
-        <th>Moliyalashtirish</th>
-        <th>Muddati</th>
-        <th>Foiz</th>
-        <th>Holat</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let loan of loans">
-        <td>{{ loan.title || '—' }}</td>
-        <td>{{ loan.amount | number:'1.0-0' }}</td>
-        <td>
-          <div class="progress-bar">
-            <div class="progress-fill" [style.width.%]="fundingPercent(loan)"></div>
-          </div>
-          <small>{{ fundingPercent(loan) }}%</small>
-        </td>
-        <td>{{ loan.durationDays }} kun</td>
-        <td>{{ loan.interestRate }}%</td>
-        <td><span class="badge">{{ loanStatusLabel(loan.status) }}</span></td>
-        <td>
-          <a [routerLink]="['/loans', loan.id]" class="btn-sm">Ko'rish</a>
-          <button
-            *ngIf="loan.status === LoanStatus.Funded"
-            class="btn-sm btn-success"
-            (click)="accept(loan.id)">
-            Qabul qilish
-          </button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <div class="loading" *ngIf="loading">
+    <div class="spinner"></div>
+    Yuklanmoqda...
+  </div>
+
+  <div class="table-container" *ngIf="!loading && loans.length">
+    <table>
+      <thead>
+        <tr>
+          <th>Nomi</th>
+          <th>Summa</th>
+          <th>Moliyalashtirish</th>
+          <th>Muddati</th>
+          <th>Foiz</th>
+          <th>Holat</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let loan of loans">
+          <td><strong>{{ loan.title || '—' }}</strong></td>
+          <td class="font-mono">{{ loan.amount | number:'1.0-0' }}</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="fundingPercent(loan)"></div>
+            </div>
+            <small>{{ fundingPercent(loan) }}%</small>
+          </td>
+          <td>{{ loan.durationDays }} kun</td>
+          <td>{{ loan.interestRate }}%</td>
+          <td><span class="badge">{{ loanStatusLabel(loan.status) }}</span></td>
+          <td style="display: flex; gap: 6px; align-items: center;">
+            <a [routerLink]="['/loans', loan.id]" class="btn-sm">Ko'rish</a>
+            <button
+              *ngIf="loan.status === LoanStatus.Funded"
+              class="btn-sm btn-success"
+              (click)="accept(loan.id)">
+              Qabul qilish
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
   <div *ngIf="!loading && !loans.length" class="empty-state">
+    <div class="empty-state-icon">&#128196;</div>
     <p>Siz hali hech qanday loan yaratamagansiz.</p>
     <a routerLink="/create-loan" class="btn-sm">Loan yaratish</a>
   </div>

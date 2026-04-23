@@ -1,7 +1,11 @@
 <nav class="navbar">
-  <a class="brand" routerLink="/">P2P Loan</a>
+  <a class="brand" routerLink="/">
+    <span class="brand-icon">P2P</span>
+    Loan
+  </a>
 
   <div class="nav-links" *ngIf="auth.isLoggedIn">
+    <a routerLink="/dashboard" routerLinkActive="active">Boshqaruv</a>
     <a routerLink="/loans" routerLinkActive="active">Loanlar</a>
     <a routerLink="/my-loans" routerLinkActive="active">Mening loanlarim</a>
     <a routerLink="/investments" routerLinkActive="active">Investitsiyalar</a>
@@ -11,11 +15,11 @@
   <div class="nav-auth">
     <ng-container *ngIf="auth.isLoggedIn; else guestLinks">
       <span class="nav-user">{{ user?.activeRole }}</span>
-      <button class="btn-sm" (click)="logout()">Chiqish</button>
+      <button class="btn-sm btn-outline" (click)="logout()">Chiqish</button>
     </ng-container>
     <ng-template #guestLinks>
-      <a routerLink="/login">Kirish</a>
-      <a routerLink="/register">Ro'yxatdan o'tish</a>
+      <a routerLink="/login" class="btn-sm btn-ghost">Kirish</a>
+      <a routerLink="/register" class="btn-sm">Ro'yxatdan o'tish</a>
     </ng-template>
   </div>
 </nav>
