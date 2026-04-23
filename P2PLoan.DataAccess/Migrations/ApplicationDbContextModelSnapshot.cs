@@ -233,6 +233,12 @@ namespace P2PLoan.DataAccess.Migrations
                     b.Property<short>("RepaymentFrequency")
                         .HasColumnType("smallint");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<DateTimeOffset?>("StartDate")
                         .HasColumnType("datetimeoffset");
 
@@ -348,7 +354,9 @@ namespace P2PLoan.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ExternalId");
+                    b.HasIndex("ExternalId")
+                        .IsUnique()
+                        .HasFilter("[ExternalId] IS NOT NULL");
 
                     b.HasIndex("UserId");
 
@@ -367,8 +375,8 @@ namespace P2PLoan.DataAccess.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTime>("DueDate")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset>("DueDate")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<decimal>("InterestAmount")
                         .HasColumnType("decimal(18,2)");
@@ -398,10 +406,7 @@ namespace P2PLoan.DataAccess.Migrations
             modelBuilder.Entity("P2PLoan.Core.Entities.Role", b =>
                 {
                     b.Property<short>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("smallint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<short>("Id"));
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -411,6 +416,23 @@ namespace P2PLoan.DataAccess.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Roles");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = (short)0,
+                            Name = "Borrower"
+                        },
+                        new
+                        {
+                            Id = (short)1,
+                            Name = "Lender"
+                        },
+                        new
+                        {
+                            Id = (short)2,
+                            Name = "Admin"
+                        });
                 });
 
             modelBuilder.Entity("P2PLoan.Core.Entities.Transaction", b =>
@@ -456,6 +478,12 @@ namespace P2PLoan.DataAccess.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsPhoneVerified")
                         .HasColumnType("bit");
 
@@ -463,8 +491,7 @@ namespace P2PLoan.DataAccess.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("PasswordHash")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Phone")
                         .IsRequired()

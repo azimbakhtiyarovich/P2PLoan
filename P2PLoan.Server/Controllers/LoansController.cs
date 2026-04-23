@@ -1,11 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using P2PLoan.Core.DTO.Loan;
 using P2PLoan.Core.DTO.Payment;
-using P2PLoan.Core.Enum;
 using P2PLoan.Core.Exceptions;
-using P2PLoan.DataAccess;
 using P2PLoan.Services.Interface;
 using System.Security.Claims;
 
@@ -16,13 +13,13 @@ namespace P2PLoan.Server.Controllers;
 [Authorize]
 public class LoansController : ControllerBase
 {
-    private readonly ILoanService        _loanService;
-    private readonly ApplicationDbContext _context;
+    private readonly ILoanService    _loanService;
+    private readonly IProfileService _profileService;
 
-    public LoansController(ILoanService loanService, ApplicationDbContext context)
+    public LoansController(ILoanService loanService, IProfileService profileService)
     {
-        _loanService = loanService;
-        _context     = context;
+        _loanService    = loanService;
+        _profileService = profileService;
     }
 
     /// <summary>Barcha ochiq loanlar (lender uchun).</summary>
@@ -78,13 +75,12 @@ public class LoansController : ControllerBase
     [HttpGet("my")]
     public async Task<IActionResult> GetMyLoans()
     {
-        var userId  = GetCurrentUserId();
-        var profile = await _context.BorrowerProfiles
-            .FirstOrDefaultAsync(bp => bp.UserId == userId);
+        var userId    = GetCurrentUserId();
+        var profileId = await _profileService.GetBorrowerProfileIdAsync(userId);
 
-        if (profile is null) return Ok(Array.Empty<object>());
+        if (profileId is null) return Ok(Array.Empty<object>());
 
-        var loans = await _loanService.GetLoansByBorrowerAsync(profile.Id);
+        var loans = await _loanService.GetLoansByBorrowerAsync(profileId.Value);
         return Ok(loans.Select(l => new LoanSummaryDto
         {
             Id           = l.Id,
@@ -103,12 +99,11 @@ public class LoansController : ControllerBase
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        var userId  = GetCurrentUserId();
-        var profile = await _context.BorrowerProfiles
-            .FirstOrDefaultAsync(bp => bp.UserId == userId)
+        var userId    = GetCurrentUserId();
+        var profileId = await _profileService.GetBorrowerProfileIdAsync(userId)
             ?? throw new NotFoundException("BorrowerProfile topilmadi. Avval profil to'ldiring.");
 
-        var loan = await _loanService.CreateLoanAsync(dto, profile.Id);
+        var loan = await _loanService.CreateLoanAsync(dto, profileId);
         return CreatedAtAction(nameof(GetById), new { id = loan.Id },
             new { loan.Id, loan.Status, loan.Amount });
     }

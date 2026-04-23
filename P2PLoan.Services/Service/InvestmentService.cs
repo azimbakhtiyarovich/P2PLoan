@@ -29,7 +29,7 @@ public class InvestmentService : IInvestmentService
 
     public async Task<Investment> InvestAsync(Guid lenderUserId, InvestDto dto)
     {
-        // 1. Loan tekshirish
+        // ── Validatsiya (DB ga bormasdan avval) ───────────────────────────
         var loan = await _context.Loans
             .Include(l => l.Borrower)
             .FirstOrDefaultAsync(l => l.Id == dto.LoanId)
@@ -45,52 +45,73 @@ public class InvestmentService : IInvestmentService
             throw new ValidationException("amount",
                 $"Minimal investitsiya miqdori: {loan.MinContribution:N0} UZS");
 
-        var remaining = loan.Amount - loan.FundedAmount;
+        var remaining    = loan.Amount - loan.FundedAmount;
         var actualAmount = Math.Min(dto.Amount, remaining);
+        if (actualAmount <= 0)
+            throw new InvalidLoanStateException("Bu loan to'liq moliyalashtirilgan.");
 
-        // 2. LenderProfile topish
         var lenderProfile = await _context.LenderProfiles
             .FirstOrDefaultAsync(lp => lp.UserId == lenderUserId)
-            ?? throw new NotFoundException("LenderProfile", lenderUserId);
+            ?? throw new NotFoundException("LenderProfile topilmadi. Avval lender profilingizni yarating.");
 
-        // 3. Walletdan yechish
-        await _wallet.WithdrawAsync(
-            lenderUserId, actualAmount,
-            TransactionType.Investment,
-            dto.LoanId,
-            $"Loan #{dto.LoanId} ga investitsiya");
-
-        // 4. Investment yozuvi
-        var investment = new Investment
+        // ── Atomik operatsiya: transaction ────────────────────────────────
+        await using var tx = await _context.Database.BeginTransactionAsync();
+        try
         {
-            LoanId     = dto.LoanId,
-            LenderId   = lenderProfile.Id,
-            Amount     = actualAmount,
-            InvestedAt = DateTimeOffset.UtcNow
-        };
-        _context.Investments.Add(investment);
+            // 1. Wallet dan yechish BIRINCHI (retry loop bo'lgani uchun oldin bajariladi)
+            await _wallet.WithdrawAsync(
+                lenderUserId, actualAmount,
+                TransactionType.Investment,
+                dto.LoanId,
+                $"Loan #{dto.LoanId} ga investitsiya");
 
-        // 5. Loan FundedAmount yangilash
-        loan.FundedAmount += actualAmount;
-        loan.Status = loan.FundedAmount >= loan.Amount
-            ? LoanStatus.Funded
-            : LoanStatus.PartiallyFunded;
+            // 2. Investment yozuvi
+            var investment = new Investment
+            {
+                LoanId     = dto.LoanId,
+                LenderId   = lenderProfile.Id,
+                Amount     = actualAmount,
+                InvestedAt = DateTimeOffset.UtcNow
+            };
+            _context.Investments.Add(investment);
 
-        await _context.SaveChangesAsync();
+            // 3. Loan FundedAmount yangilash (RowVersion orqali concurrency himoyasi)
+            loan.FundedAmount += actualAmount;
+            loan.Status = loan.FundedAmount >= loan.Amount
+                ? LoanStatus.Funded
+                : LoanStatus.PartiallyFunded;
 
-        // 6. Audit va Notification
-        await _audit.LogAsync("Investment", investment.Id, "Created", lenderUserId,
-            new { investment.Amount, dto.LoanId });
+            await _context.SaveChangesAsync(); // RowVersion conflict bu yerda tutiladi
 
-        if (loan.Borrower?.UserId != null)
-            await _notifications.SendAsync(loan.Borrower.UserId, "Yangi investitsiya",
-                $"'{loan.Title}' kreditingizga {actualAmount:N0} UZS investitsiya kiritildi.");
+            await tx.CommitAsync();
 
-        if (loan.Status == LoanStatus.Funded)
-            await _notifications.SendAsync(loan.Borrower!.UserId, "Kreditingiz to'liq moliyalashtirildi!",
-                $"'{loan.Title}' kreditingiz {loan.Amount:N0} UZS to'liq moliyalashtirildi. Tasdiqlashingiz kerak.");
+            // ── Audit va Notification (izolyatsiyalangan, tranzaksiyadan tashqarida) ──
+            await _audit.LogAsync("Investment", investment.Id, "Created", lenderUserId,
+                new { investment.Amount, dto.LoanId });
 
-        return investment;
+            if (loan.Borrower?.UserId != null)
+                await _notifications.SendAsync(loan.Borrower.UserId,
+                    "Yangi investitsiya",
+                    $"'{loan.Title}' kreditingizga {actualAmount:N0} UZS investitsiya kiritildi.");
+
+            if (loan.Status == LoanStatus.Funded && loan.Borrower?.UserId != null)
+                await _notifications.SendAsync(loan.Borrower.UserId,
+                    "Kreditingiz to'liq moliyalashtirildi!",
+                    $"'{loan.Title}' kreditingiz {loan.Amount:N0} UZS to'liq moliyalashtirildi. Tasdiqlashingiz kerak.");
+
+            return investment;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await tx.RollbackAsync();
+            throw new ConflictException(
+                "Bir vaqtda boshqa investor ham bu loanga investitsiya qildi. Qayta urinib ko'ring.");
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task WithdrawInvestmentAsync(Guid investmentId, Guid lenderUserId)
@@ -104,29 +125,40 @@ public class InvestmentService : IInvestmentService
         if (investment.Lender?.UserId != lenderUserId)
             throw new UnauthorizedException("Bu investitsiya sizga tegishli emas.");
 
-        // Faqat loan Active bo'lgunga qadar qaytarish mumkin
         if (investment.Loan?.Status is LoanStatus.Active or LoanStatus.Repayment
             or LoanStatus.Paid or LoanStatus.Overdue or LoanStatus.Default)
             throw new InvalidLoanStateException("Faol yoki tugagan kreditdan investitsiyani qaytarib bo'lmaydi.");
 
-        // Wallet ga qaytarish
-        await _wallet.DepositAsync(
-            lenderUserId, investment.Amount,
-            investment.LoanId,
-            $"Loan #{investment.LoanId} dan investitsiya qaytarildi");
+        await using var tx = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            // 1. Wallet ga qaytarish BIRINCHI
+            await _wallet.DepositAsync(
+                lenderUserId, investment.Amount,
+                TransactionType.Refund,
+                investment.LoanId,
+                $"Loan #{investment.LoanId} dan investitsiya qaytarildi");
 
-        // Loan FundedAmount kamaytirish
-        var loan = investment.Loan!;
-        loan.FundedAmount -= investment.Amount;
-        loan.Status = loan.FundedAmount > 0
-            ? LoanStatus.PartiallyFunded
-            : LoanStatus.OpenForFunding;
+            // 2. Loan FundedAmount kamaytirish
+            var loan = investment.Loan!;
+            loan.FundedAmount -= investment.Amount;
+            loan.Status = loan.FundedAmount > 0
+                ? LoanStatus.PartiallyFunded
+                : LoanStatus.OpenForFunding;
 
-        _context.Investments.Remove(investment);
-        await _context.SaveChangesAsync();
+            _context.Investments.Remove(investment);
+            await _context.SaveChangesAsync();
 
-        await _audit.LogAsync("Investment", investmentId, "Withdrawn", lenderUserId,
-            new { investment.Amount, investment.LoanId });
+            await tx.CommitAsync();
+
+            await _audit.LogAsync("Investment", investmentId, "Withdrawn", lenderUserId,
+                new { investment.Amount, investment.LoanId });
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<IEnumerable<InvestmentDto>> GetByLenderAsync(Guid lenderUserId)

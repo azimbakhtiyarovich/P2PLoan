@@ -9,15 +9,16 @@ import { AuthService } from '../../services/auth.service';
 })
 export class RegisterComponent {
   email = '';
-  phoneNumber = '';
+  phone = '';
   password = '';
+  role = 0;
   error = '';
   loading = false;
 
   constructor(private auth: AuthService, private router: Router) {}
 
   submit() {
-    if (!this.email || !this.phoneNumber || !this.password) {
+    if (!this.email || !this.phone || !this.password) {
       this.error = 'Barcha maydonlarni to\'ldiring.';
       return;
     }
@@ -27,7 +28,7 @@ export class RegisterComponent {
     }
     this.loading = true;
     this.error = '';
-    this.auth.register(this.email, this.phoneNumber, this.password).subscribe({
+    this.auth.register(this.email, this.phone, this.password, this.role).subscribe({
       next: () => this.router.navigate(['/']),
       error: err => {
         this.error = err?.error?.message ?? err?.error ?? 'Ro\'yxatdan o\'tish muvaffaqiyatsiz.';

@@ -1,65 +1,51 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, tap } from 'rxjs';
-import { AuthResponse } from '../models';
+import { BehaviorSubject, Observable, tap, catchError, of } from 'rxjs';
+
+export interface UserSession {
+  userId: string;
+  expiresAt: string;
+  roles: string[];
+  activeRole: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly TOKEN_KEY = 'p2p_token';
-  private readonly USER_KEY  = 'p2p_user';
+  // Token SAQLANMAYDI. Faqat UI uchun foydalanuvchi ma'lumotlari.
+  // Haqiqiy autentifikatsiya — HttpOnly cookie (backend boshqaradi).
+  currentUser$ = new BehaviorSubject<UserSession | null>(null);
 
-  currentUser$ = new BehaviorSubject<AuthResponse | null>(this.loadUser());
+  // Guard bu signal bilan kutadi: checkSession tugaguncha route aktivlanmaydi
+  private _initialized$ = new BehaviorSubject<boolean>(false);
+  readonly initialized$ = this._initialized$.asObservable();
 
   constructor(private http: HttpClient) {}
 
-  get token(): string | null {
-    return localStorage.getItem(this.TOKEN_KEY);
-  }
-
   get isLoggedIn(): boolean {
-    const token = this.token;
-    if (!token) return false;
-
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const expiry = payload.exp * 1000; // seconds → ms
-      if (Date.now() >= expiry) {
-        this.logout();
-        return false;
-      }
-      return true;
-    } catch {
-      this.logout();
-      return false;
-    }
+    return !!this.currentUser$.value;
   }
 
-  register(email: string, phoneNumber: string, password: string) {
+  register(email: string, phoneNumber: string, password: string, role: number = 0) {
     return this.http
-      .post<AuthResponse>('/api/auth/register', { email, phoneNumber, password })
+      .post<AuthResponse>('/api/auth/register', { email, phoneNumber, password, role })
       .pipe(tap(res => this.save(res)));
   }
 
-  login(phoneNumber: string, password: string) {
+  register(email: string, phoneNumber: string, password: string): Observable<UserSession> {
     return this.http
-      .post<AuthResponse>('/api/auth/login', { phoneNumber, password })
-      .pipe(tap(res => this.save(res)));
+      .post<UserSession>('/api/auth/register', { email, phoneNumber, password })
+      .pipe(tap(session => this.currentUser$.next(session)));
   }
 
-  logout() {
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.USER_KEY);
-    this.currentUser$.next(null);
+  login(phoneNumber: string, password: string): Observable<UserSession> {
+    return this.http
+      .post<UserSession>('/api/auth/login', { phoneNumber, password })
+      .pipe(tap(session => this.currentUser$.next(session)));
   }
 
-  private save(res: AuthResponse) {
-    localStorage.setItem(this.TOKEN_KEY, res.accessToken);
-    localStorage.setItem(this.USER_KEY, JSON.stringify(res));
-    this.currentUser$.next(res);
-  }
-
-  private loadUser(): AuthResponse | null {
-    const raw = localStorage.getItem(this.USER_KEY);
-    return raw ? JSON.parse(raw) : null;
+  logout(): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>('/api/auth/logout', {}).pipe(
+      tap(() => this.currentUser$.next(null))
+    );
   }
 }

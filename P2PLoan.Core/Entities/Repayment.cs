@@ -12,7 +12,7 @@ public class Repayment
 {
     [Key] public Guid Id { get; set; } = Guid.NewGuid();
     public Guid LoanId { get; set; }
-    public DateTime DueDate { get; set; }
+    public DateTimeOffset DueDate { get; set; }
     [Column(TypeName = "decimal(18,2)")] public decimal Amount { get; set; }
     [Column(TypeName = "decimal(18,2)")] public decimal PrincipalAmount { get; set; }
     [Column(TypeName = "decimal(18,2)")] public decimal InterestAmount { get; set; }

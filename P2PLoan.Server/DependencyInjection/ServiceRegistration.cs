@@ -20,17 +20,26 @@ public static class ServiceRegistration
         services.AddScoped<IAuditService,         AuditService>();
         services.AddScoped<ICreditScoringService, CreditScoringService>();
         services.AddScoped<IJwtService,           JwtService>();
+        services.AddScoped<IProfileService,       ProfileService>();
 
         return services;
     }
 
-    /// <summary>JWT Bearer authentication sozlamasini qo'shadi.</summary>
+    /// <summary>
+    /// JWT Bearer authentication sozlamasini qo'shadi.
+    /// Token <c>access_token</c> HttpOnly cookie dan o'qiladi.
+    /// Dev: dotnet user-secrets set "JwtSettings:SecretKey" "..."
+    /// Prod: JwtSettings__SecretKey env variable
+    /// </summary>
     public static IServiceCollection AddJwtAuthentication(
         this IServiceCollection services, IConfiguration configuration)
     {
         var jwt    = configuration.GetSection("JwtSettings");
         var secret = jwt["SecretKey"]
-            ?? throw new InvalidOperationException("JwtSettings:SecretKey topilmadi.");
+            ?? throw new InvalidOperationException(
+                "JwtSettings:SecretKey topilmadi. " +
+                "Dev uchun: dotnet user-secrets set \"JwtSettings:SecretKey\" \"...\" | " +
+                "Prod uchun: JwtSettings__SecretKey env variable o'rnating.");
 
         services
             .AddAuthentication(options =>
@@ -40,6 +49,20 @@ public static class ServiceRegistration
             })
             .AddJwtBearer(options =>
             {
+                // Token HTTP Authorization header emas, HttpOnly cookie dan olinadi
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = ctx =>
+                    {
+                        if (ctx.Request.Cookies.TryGetValue("access_token", out var cookieToken)
+                            && !string.IsNullOrEmpty(cookieToken))
+                        {
+                            ctx.Token = cookieToken;
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,

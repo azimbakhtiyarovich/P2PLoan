@@ -11,10 +11,12 @@ public class User
 {
     [Key] public Guid Id { get; set; } = Guid.NewGuid();
     [Required, MaxLength(20)] public string Phone { get; set; } = null!;
-    [MaxLength(200)] public string? PasswordHash { get; set; }
+    public string? PasswordHash { get; set; }
     public bool IsPhoneVerified { get; set; } = false;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? LastLogin { get; set; }
+    public bool IsDeleted { get; set; } = false;
+    public DateTimeOffset? DeletedAt { get; set; }
 
     // Navigation
     public UserProfile? Profile { get; set; }

@@ -52,38 +52,51 @@ public class PaymentService : IPaymentService
 
     public async Task ProcessCallbackAsync(PaymentCallbackDto callback)
     {
-        // ExternalId orqali payment ni topish
         var payment = await _context.Payments
             .FirstOrDefaultAsync(p => p.ExternalId == callback.ExternalId
                                    && p.Provider == callback.Provider)
             ?? throw new NotFoundException($"Payment ExternalId={callback.ExternalId} topilmadi");
 
-        if (payment.Status == PaymentStatus.Success)
-            return; // Idempotent: ikki marta qayta ishlash xavfsiz
+        // Idempotency: ikki marta qayta ishlash xavfsiz
+        if (payment.Status == PaymentStatus.Success) return;
 
-        var prevStatus = payment.Status;
-        payment.Status     = callback.Status;
-        payment.ExternalId = callback.ExternalId;
-        payment.UpdatedAt  = DateTimeOffset.UtcNow;
-
-        // Muvaffaqiyatli to'lov → wallet ga depozit
-        if (callback.Status == PaymentStatus.Success && payment.UserId.HasValue)
+        await using var tx = await _context.Database.BeginTransactionAsync();
+        try
         {
-            await _wallet.DepositAsync(
-                payment.UserId.Value,
-                payment.Amount,
-                payment.Id,
-                $"Depozit via {payment.Provider}");
+            var prevStatus = payment.Status;
+            payment.Status     = callback.Status;
+            payment.ExternalId = callback.ExternalId;
+            payment.UpdatedAt  = DateTimeOffset.UtcNow;
+            await _context.SaveChangesAsync();
 
-            await _notifications.SendAsync(payment.UserId.Value,
-                "Hisobingizga pul kelib tushdi",
-                $"{payment.Amount:N0} UZS hisobingizga muvaffaqiyatli kiritildi ({payment.Provider}).");
+            if (callback.Status == PaymentStatus.Success && payment.UserId.HasValue)
+            {
+                await _wallet.DepositAsync(
+                    payment.UserId.Value,
+                    payment.Amount,
+                    TransactionType.Deposit,
+                    payment.Id,
+                    $"Depozit via {payment.Provider}");
+            }
+
+            await tx.CommitAsync();
+
+            // Audit va notification tranzaksiyadan tashqarida
+            await _audit.LogAsync("Payment", payment.Id, "CallbackProcessed", payment.UserId,
+                new { From = prevStatus, To = callback.Status });
+
+            if (callback.Status == PaymentStatus.Success && payment.UserId.HasValue)
+            {
+                await _notifications.SendAsync(payment.UserId.Value,
+                    "Hisobingizga pul kelib tushdi",
+                    $"{payment.Amount:N0} UZS hisobingizga muvaffaqiyatli kiritildi ({payment.Provider}).");
+            }
         }
-
-        await _context.SaveChangesAsync();
-
-        await _audit.LogAsync("Payment", payment.Id, "CallbackProcessed", payment.UserId,
-            new { From = prevStatus, To = callback.Status });
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task PayRepaymentAsync(Guid repaymentId, Guid borrowerUserId)
@@ -103,30 +116,42 @@ public class PaymentService : IPaymentService
         var due = repayment.Amount - repayment.PaidAmount;
         if (due <= 0) throw new ConflictException("Bu to'lov allaqachon to'liq to'langan.");
 
-        // Wallet dan yechish
-        await _wallet.WithdrawAsync(
-            borrowerUserId, due,
-            TransactionType.RepaymentReceived,
-            repaymentId,
-            $"Repayment #{repaymentId}");
+        await using var tx = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            // 1. Borrower walletdan yechish
+            await _wallet.WithdrawAsync(
+                borrowerUserId, due,
+                TransactionType.RepaymentReceived,
+                repaymentId,
+                $"Repayment #{repaymentId}");
 
-        repayment.PaidAmount += due;
-        repayment.PaidAt = DateTimeOffset.UtcNow;
-        repayment.Status = PaymentStatus.Success;
+            // 2. Repayment yangilash
+            repayment.PaidAmount += due;
+            repayment.PaidAt     = DateTimeOffset.UtcNow;
+            repayment.Status     = PaymentStatus.Success;
+            await _context.SaveChangesAsync();
 
-        // Lenderlarga foydani taqsimlash
-        await DistributeProfitToLendersAsync(repayment);
+            // 3. Lenderlarga foyda taqsimlash (BITTA transaksiyada)
+            await DistributeProfitToLendersAsync(repayment);
 
-        // Barcha repayment lar to'langan bo'lsa loan Paid holatiga o'tkazish
-        await CheckAndFinalizeLoanAsync(repayment.LoanId);
+            // 4. Loan tugadimi tekshirish
+            await CheckAndFinalizeLoanAsync(repayment.LoanId);
 
-        await _context.SaveChangesAsync();
+            await tx.CommitAsync();
 
-        await _notifications.SendAsync(borrowerUserId, "To'lov amalga oshirildi",
-            $"{due:N0} UZS muvaffaqiyatli to'landi.");
+            // Notification va audit (izolyatsiyalangan)
+            await _notifications.SendAsync(borrowerUserId, "To'lov amalga oshirildi",
+                $"{due:N0} UZS muvaffaqiyatli to'landi.");
 
-        await _audit.LogAsync("Repayment", repaymentId, "Paid", borrowerUserId,
-            new { Amount = due });
+            await _audit.LogAsync("Repayment", repaymentId, "Paid", borrowerUserId,
+                new { Amount = due });
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<IEnumerable<Payment>> GetByUserAsync(Guid userId)
@@ -140,10 +165,6 @@ public class PaymentService : IPaymentService
 
     // ── Private Helpers ───────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Har bir repayment to'langanda, investorlar ulushiga qarab foydani
-    /// wallet ga kiritadi (ProfitCredit transaction).
-    /// </summary>
     private async Task DistributeProfitToLendersAsync(Repayment repayment)
     {
         var loan = repayment.Loan!;
@@ -158,18 +179,18 @@ public class PaymentService : IPaymentService
         {
             if (inv.Lender?.UserId is null) continue;
 
-            // Investor ulushi = uning miqdori / umumiy moliyalashtirilgan summa
-            var share = inv.Amount / loan.FundedAmount;
-
+            var share          = inv.Amount / loan.FundedAmount;
             var principalShare = Math.Round(repayment.PrincipalAmount * share, 2);
             var interestShare  = Math.Round(repayment.InterestAmount * share, 2);
             var total          = principalShare + interestShare;
 
+            // TransactionType.ProfitCredit — to'g'ri tur (avval Deposit edi — FIX #11)
             await _wallet.DepositAsync(
                 inv.Lender.UserId,
                 total,
+                TransactionType.ProfitCredit,
                 repayment.Id,
-                $"Loan #{loan.Id} dan to'lov: asosiy={principalShare:N2}, foiz={interestShare:N2}");
+                $"Loan #{loan.Id}: asosiy={principalShare:N2}, foiz={interestShare:N2}");
 
             await _notifications.SendAsync(inv.Lender.UserId, "Daromad keldi",
                 $"{total:N0} UZS hisobingizga kiritildi (kredit to'lovi).");
@@ -186,7 +207,7 @@ public class PaymentService : IPaymentService
 
         var loan = await _context.Loans.FindAsync(loanId);
         if (loan is null) return;
-
         loan.Status = LoanStatus.Paid;
+        await _context.SaveChangesAsync();
     }
 }

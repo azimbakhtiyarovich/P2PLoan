@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using P2PLoan.Core.Enum;
 
 namespace P2PLoan.Core.DTO.Auth;
 
@@ -16,4 +17,8 @@ public class RegisterDto
     /// </summary>
     [Required, MinLength(8), MaxLength(100)]
     public string Password { get; set; } = null!;
+
+    /// <summary>Ro'yxatdan o'tishda rol tanlash: Borrower=0, Lender=1</summary>
+    [Required]
+    public RoleType Role { get; set; } = RoleType.Borrower;
 }
